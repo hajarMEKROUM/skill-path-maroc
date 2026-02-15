@@ -6,5 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Freelance extends Model
 {
-    //
+ public function applications()
+{
+    return $this->hasMany(\App\Models\Application::class);
+}
 }

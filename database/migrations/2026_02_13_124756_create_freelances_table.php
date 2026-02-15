@@ -13,6 +13,13 @@ return new class extends Migration
     {
         Schema::create('freelances', function (Blueprint $table) {
             $table->id();
+            $table->string('title'); // مثال: Développeur Full Stack
+            $table->string('company_name'); // اسم الشركة
+            $table->text('description'); // الوصف الوظيفي
+            $table->string('budget'); // الميزانية (مثلاً: 5000-8000 MAD)
+            $table->string('duration'); // المدة (مثلاً: 3 mois)
+            $table->json('skills')->nullable(); // المهارات المطلوبة كمصفوفة
+            $table->string('status')->default('available'); // حالة العرض
             $table->timestamps();
         });
     }
@@ -24,7 +31,4 @@ return new class extends Migration
     {
         Schema::dropIfExists('freelances');
     }
-
-
-    
 };
