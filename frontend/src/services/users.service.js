@@ -1,0 +1,39 @@
+import api from './api';
+
+export const usersService = {
+  // Fetch paginated users with filters and sorting
+  getUsers: async (params = {}) => {
+    const response = await api.get('/admin/users', { params });
+    return response.data;
+  },
+
+  // Get single user details
+  getUserDetails: async (id) => {
+    const response = await api.get(`/admin/users/${id}`);
+    return response.data;
+  },
+
+  // Update user role (Spatie implementation in backend)
+  updateRole: async (id, role) => {
+    const response = await api.patch(`/admin/users/${id}/role`, { role });
+    return response.data;
+  },
+
+  // Ban or suspend user
+  banUser: async (id, reason) => {
+    const response = await api.patch(`/admin/users/${id}/ban`, { reason });
+    return response.data;
+  },
+
+  // Verify user manually
+  verifyUser: async (id) => {
+    const response = await api.patch(`/admin/users/${id}/verify`);
+    return response.data;
+  },
+
+  // Delete user (soft delete)
+  deleteUser: async (id) => {
+    const response = await api.delete(`/admin/users/${id}`);
+    return response.data;
+  }
+};

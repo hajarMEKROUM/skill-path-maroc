@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: skillpath-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./laravel-backend/public:/var/www/html/public
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - skillpath-network
+
+  backend:
+    build:
+      context: ./laravel-backend
+      dockerfile: Dockerfile
+    container_name: skillpath-backend
+    volumes:
+      - ./laravel-backend:/var/www/html
+    environment:
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=skillpath_db
+      - DB_USERNAME=skillpath_user
+      - DB_PASSWORD=skillpath_password
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=null
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+      - SESSION_DRIVER=redis
+      - CACHE_STORE=redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - skillpath-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: skillpath-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - skillpath-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: skillpath-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: skillpath_db
+      MYSQL_USER: skillpath_user
+      MYSQL_PASSWORD: skillpath_password
+      MYSQL_ROOT_PASSWORD: skillpath_root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "skillpath_user", "-pskillpath_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - skillpath-network
+
+  redis:
+    image: redis:alpine
+    container_name: skillpath-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - skillpath-network
+
+networks:
+  skillpath-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  redis_data:
