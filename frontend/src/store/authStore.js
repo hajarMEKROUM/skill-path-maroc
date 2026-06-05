@@ -1,20 +1,18 @@
 import { create } from "zustand";
-import api from "../services/api";
+import api, { getCsrf } from "../services/api";
 
 const useAuthStore = create((set) => ({
   user: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true, // MUST BE TRUE to prevent premature redirect in ProtectedRoute
   error: null,
 
   login: async (credentials) => {
     set({ isLoading: true, error: null });
 
     try {
-      // ✅ CSRF (via baseURL propre)
-      await api.get("/sanctum/csrf-cookie", {
-        baseURL: "http://127.0.0.1:8000",
-      });
+      // ✅ CSRF (via getCsrf helper to ensure domain matches)
+      await getCsrf();
 
       // ✅ LOGIN (API v1)
       const response = await api.post("/login", credentials);
@@ -39,9 +37,7 @@ const useAuthStore = create((set) => ({
     set({ isLoading: true, error: null });
 
     try {
-      await api.get("/sanctum/csrf-cookie", {
-        baseURL: "http://127.0.0.1:8000",
-      });
+      await getCsrf();
 
       const response = await api.post("/register", userData);
 

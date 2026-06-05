@@ -5,8 +5,9 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\LoginRequest;
@@ -18,16 +19,16 @@ class AuthController extends Controller
     {
         $validated = $request->validated();
 
-        $role = $validated['role']->value;
+        $roleValue = $validated['role'] instanceof \UnitEnum ? $validated['role']->value : $validated['role'];
 
         $user = User::create([
             'name'     => $validated['name'],
             'email'    => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role'     => $role,
+            'password' => $validated['password'], // Laravel hashes automatically due to 'hashed' cast in User.php
+            'role'     => $roleValue,
         ]);
 
-        $user->assignRole($role);
+        $user->assignRole($roleValue);
 
         Auth::guard('web')->login($user);
 
@@ -71,6 +72,58 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Successfully logged out'
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'bio' => 'nullable|string|max:2000',
+            'password' => 'nullable|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (isset($validated['name'])) {
+            $user->name = $validated['name'];
+        }
+        if (array_key_exists('bio', $validated)) {
+            $user->bio = $validated['bio'];
+        }
+        if (! empty($validated['password'])) {
+            $user->password = $validated['password'];
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Profil mis à jour.',
+            'user' => new UserResource($user->load('roles')),
+        ]);
+    }
+
+    public function uploadAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => 'required|image|max:2048',
+        ]);
+
+        $user = $request->user();
+
+        if ($user->avatar) {
+            $oldPath = str_replace('/storage/', '', $user->avatar);
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $path = $request->file('avatar')->store('avatars', 'public');
+        $user->avatar = '/storage/' . $path;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Avatar mis à jour.',
+            'avatar' => $user->avatar,
+            'user' => new UserResource($user->load('roles')),
         ]);
     }
 }

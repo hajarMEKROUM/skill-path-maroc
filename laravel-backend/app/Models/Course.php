@@ -45,4 +45,15 @@ class Course extends Model
     {
         return $this->hasMany(Certificate::class);
     }
+
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $query = static::query();
+
+        if (is_numeric($value)) {
+            return $query->where('id', $value)->first();
+        }
+
+        return $query->where('slug', $value)->first();
+    }
 }

@@ -9,7 +9,14 @@ class AIRecommendationService
 {
     public function generateForUser($user): array
     {
-        $baseUrl = rtrim(config('services.ai.url'), '/');
+        $baseUrl = rtrim((string) (config('services.ai.url') ?? ''), '/');
+        if ($baseUrl === '') {
+            return [
+                'user_id' => (string) $user->id,
+                'recommended_focus' => 'Laravel',
+                'confidence_score' => 50,
+            ];
+        }
 
         $payload = [
             'user_id' => (string) $user->id,

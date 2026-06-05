@@ -2,9 +2,10 @@ import React from 'react';
 import { Navigate, useLocation, Outlet } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 
-const ProtectedRoute = ({ allowedRoles = null }) => {
+const ProtectedRoute = ({ children, allowedRoles = null, role = null }) => {
   const { user, isAuthenticated, isLoading } = useAuthStore();
   const location = useLocation();
+  const roles = allowedRoles ?? (role ? [role] : null);
 
   // loading
   if (isLoading) {
@@ -21,11 +22,11 @@ const ProtectedRoute = ({ allowedRoles = null }) => {
   }
 
   // role check
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/dashboard/student" replace />;
   }
 
-  return <Outlet />;
+  return children ? children : <Outlet />;
 };
 
 export default ProtectedRoute;

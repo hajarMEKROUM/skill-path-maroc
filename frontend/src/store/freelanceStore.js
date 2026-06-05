@@ -5,20 +5,17 @@ const useFreelanceStore = create((set, get) => ({
   missions: [],
   isLoadingMissions: false,
   errorMissions: null,
-  
-  // Proposal State
+
   isSubmittingProposal: false,
   proposalModalOpen: false,
   selectedMissionId: null,
 
-  // Chat State
   conversations: [],
   activeConversationId: null,
   messages: [],
   isLoadingChat: false,
   isSendingMessage: false,
 
-  // Filters State
   filters: {
     search: '',
     category: '',
@@ -27,7 +24,9 @@ const useFreelanceStore = create((set, get) => ({
   },
 
   setFilters: (newFilters) => {
-    set((state) => ({ filters: { ...state.filters, ...newFilters } }));
+    set((state) => ({
+      filters: { ...state.filters, ...newFilters },
+    }));
     get().fetchMissions();
   },
 
@@ -36,12 +35,18 @@ const useFreelanceStore = create((set, get) => ({
     try {
       const { filters } = get();
       const data = await freelanceService.getMissions(filters);
-      set({ 
-        missions: data.data || data, 
-        isLoadingMissions: false 
+      const raw = data.data ?? data;
+      const missions = Array.isArray(raw) ? raw : [];
+      set({
+        missions,
+        isLoadingMissions: false,
       });
     } catch (error) {
-      set({ errorMissions: error.message, isLoadingMissions: false });
+      set({
+        errorMissions: error.response?.data?.message || error.message,
+        isLoadingMissions: false,
+        missions: [],
+      });
     }
   },
 
@@ -56,12 +61,11 @@ const useFreelanceStore = create((set, get) => ({
   submitProposal: async (rawData) => {
     const { selectedMissionId } = get();
     if (!selectedMissionId) return;
-    
+
     set({ isSubmittingProposal: true });
     try {
       await freelanceService.submitProposal(selectedMissionId, rawData);
       set({ isSubmittingProposal: false, proposalModalOpen: false, selectedMissionId: null });
-      // Could also add a success toast here
     } catch (error) {
       set({ isSubmittingProposal: false });
       throw error;
@@ -72,7 +76,11 @@ const useFreelanceStore = create((set, get) => ({
     set({ isLoadingChat: true });
     try {
       const data = await freelanceService.getConversations();
-      set({ conversations: data.data || data, isLoadingChat: false });
+      const raw = data.data ?? data;
+      set({
+        conversations: Array.isArray(raw) ? raw : [],
+        isLoadingChat: false,
+      });
     } catch (error) {
       set({ isLoadingChat: false });
       console.error('Failed to load conversations', error);
@@ -83,7 +91,11 @@ const useFreelanceStore = create((set, get) => ({
     set({ activeConversationId: conversationId, isLoadingChat: true });
     try {
       const data = await freelanceService.getMessages(conversationId);
-      set({ messages: data.data || data, isLoadingChat: false });
+      const raw = data.data ?? data;
+      set({
+        messages: Array.isArray(raw) ? raw : [],
+        isLoadingChat: false,
+      });
     } catch (error) {
       set({ isLoadingChat: false });
       console.error('Failed to load messages', error);
@@ -94,15 +106,14 @@ const useFreelanceStore = create((set, get) => ({
     const { activeConversationId, messages } = get();
     if (!activeConversationId) return;
 
-    // Optimistic UI update
     const tempId = Date.now();
     const optimisticMessage = {
       id: tempId,
       conversation_id: activeConversationId,
       content: msgData.content,
-      sender_id: 'me', // handled by auth normally
+      sender_id: 'me',
       created_at: new Date().toISOString(),
-      isPending: true
+      isPending: true,
     };
 
     set({ messages: [...messages, optimisticMessage], isSendingMessage: true });
@@ -110,18 +121,17 @@ const useFreelanceStore = create((set, get) => ({
     try {
       const confirmedMsg = await freelanceService.sendMessage(activeConversationId, msgData);
       set((state) => ({
-        messages: state.messages.map(m => m.id === tempId ? confirmedMsg : m),
-        isSendingMessage: false
+        messages: state.messages.map((m) => (m.id === tempId ? confirmedMsg : m)),
+        isSendingMessage: false,
       }));
     } catch (error) {
-      // Revert optimistic update on failure
       set((state) => ({
-        messages: state.messages.filter(m => m.id !== tempId),
-        isSendingMessage: false
+        messages: state.messages.filter((m) => m.id !== tempId),
+        isSendingMessage: false,
       }));
       throw error;
     }
-  }
+  },
 }));
 
 export default useFreelanceStore;

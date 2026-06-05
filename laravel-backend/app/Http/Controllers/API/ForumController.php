@@ -58,4 +58,24 @@ class ForumController extends Controller
 
         return response()->json($comment->load('author'), 201);
     }
+
+    public function addComment(Request $request, ForumTopic $topic)
+    {
+        return $this->comment($request, $topic);
+    }
+
+    public function destroy(Request $request, ForumTopic $topic)
+    {
+        $user = $request->user();
+        $isAdmin = $user->hasRole('admin') || $user->role === 'admin';
+
+        if ($topic->user_id !== $user->id && ! $isAdmin) {
+            abort(403, 'Vous ne pouvez pas supprimer ce sujet.');
+        }
+
+        $topic->comments()->delete();
+        $topic->delete();
+
+        return response()->json(['message' => 'Sujet supprimé avec succès.']);
+    }
 }

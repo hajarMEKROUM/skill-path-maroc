@@ -35,12 +35,18 @@ const Register = () => {
     if (formData.password !== formData.confirmPassword) {
       return setFormError('Passwords do not match');
     }
-    if (formData.password.length < 6) {
-      return setFormError('Password must be at least 6 characters');
+    if (formData.password.length < 8) {
+      return setFormError('Password must be at least 8 characters');
     }
 
     try {
-      const { confirmPassword, ...registerData } = formData;
+      const registerData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        password_confirmation: formData.confirmPassword,
+        role: formData.role
+      };
       await register(registerData);
       navigate('/dashboard');
     } catch (err) {
@@ -127,7 +133,7 @@ const Register = () => {
                     <option value="student">Student</option>
                     <option value="instructor">Instructor</option>
                     <option value="freelancer">Freelancer</option>
-                    <option value="enterprise">Enterprise</option>
+                    <option value="company">Enterprise</option>
                   </select>
                 </div>
               </div>

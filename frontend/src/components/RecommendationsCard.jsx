@@ -10,7 +10,7 @@ const RecommendationsCard = ({ recommendation }) => {
         <div className="flex justify-between items-center">
           <span className="text-gray-600 font-medium">Niveau évalué :</span>
           <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
-            {recommendation.niveau}
+            {recommendation.niveau || recommendation.level}
           </span>
         </div>
         <div className="flex justify-between items-center">
@@ -22,10 +22,12 @@ const RecommendationsCard = ({ recommendation }) => {
           <h4 className="text-md font-semibold text-gray-700 mb-2">Recommandations pour vous :</h4>
           <ul className="list-disc list-inside text-gray-600 space-y-1">
             <li>
-              <strong>Parcours conseillé :</strong> {recommendation.parcours_recommande}
+              <strong>Parcours conseillé :</strong>{' '}
+              {recommendation.parcours_recommande || recommendation.recommended_path}
             </li>
             <li>
-              <strong>Technologie à prioriser :</strong> {recommendation.langage_recommande}
+              <strong>Technologie à prioriser :</strong>{' '}
+              {recommendation.langage_recommande || recommendation.recommended_language}
             </li>
           </ul>
         </div>

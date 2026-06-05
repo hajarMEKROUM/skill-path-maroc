@@ -1,39 +1,83 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AuthController;
-
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-*/
+use App\Http\Controllers\API\CourseController;
+use App\Http\Controllers\API\PlacementTestController;
+use App\Http\Controllers\API\JobController;
+use App\Http\Controllers\API\FreelanceProposalController;
+use App\Http\Controllers\API\AdminController;
+use App\Http\Controllers\API\CertificationController;
+use App\Http\Controllers\API\ForumController;
+use App\Http\Controllers\API\RecommendationController;
 
 Route::prefix('v1')->group(function () {
-    // Auth Routes (public)
+
+    // Routes publiques
     Route::post('/register', [AuthController::class, 'register']);
     Route::post('/login', [AuthController::class, 'login']);
+    Route::get('/courses', [CourseController::class, 'index']);
+    Route::get('/courses/{course}', [CourseController::class, 'show']);
+    Route::get('/jobs', [JobController::class, 'index']);
 
-    // Protected Routes
+    // Routes protégées
     Route::middleware('auth:sanctum')->group(function () {
+
+        // Auth
         Route::get('/me', [AuthController::class, 'me']);
         Route::post('/logout', [AuthController::class, 'logout']);
-        // Placement Test
-        Route::post('/placement-test/start', [\App\Http\Controllers\API\PlacementTestController::class, 'start']);
-        Route::post('/placement-test/submit', [\App\Http\Controllers\API\PlacementTestController::class, 'submit']);
-        Route::get('/recommendations', [\App\Http\Controllers\API\PlacementTestController::class, 'recommendations']);
+        Route::put('/profile', [AuthController::class, 'updateProfile']);
+        Route::post('/profile/avatar', [AuthController::class, 'uploadAvatar']);
 
-        // Courses CRUD
-        Route::apiResource('courses', \App\Http\Controllers\API\CourseController::class);
+        // Cours (actions protégées)
+        Route::post('/courses', [CourseController::class, 'store']);
+        Route::put('/courses/{course}', [CourseController::class, 'update']);
+        Route::patch('/courses/{course}', [CourseController::class, 'update']);
+        Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
+        Route::post('/courses/{course}/enroll', [CourseController::class, 'enroll']);
+        Route::get('/my-courses', [CourseController::class, 'myCourses']);
 
-        // Jobs CRUD (existing)
-        Route::apiResource('jobs', \App\Http\Controllers\API\JobController::class);
+        // Test de positionnement + IA
+        Route::post('/placement-test/start', [PlacementTestController::class, 'start']);
+        Route::post('/placement-test/submit', [PlacementTestController::class, 'submit']);
+        Route::get('/placement-test/result', [PlacementTestController::class, 'result']);
+        Route::get('/recommendations', [RecommendationController::class, 'index']);
 
-        // Freelance Marketplace — routes used by FreelanceMarketplaceTest
+        // Certifications
+        Route::get('/certifications', [CertificationController::class, 'index']);
+        Route::post('/certifications/{id}/download', [CertificationController::class, 'download']);
+
+        // Espace Freelance
+        Route::apiResource('jobs', JobController::class)->except(['index']);
+        Route::post('/jobs/{job}/apply', [FreelanceProposalController::class, 'store']);
+        Route::get('/my-proposals', [FreelanceProposalController::class, 'myProposals']);
+
+        // Routes legacy (tests + frontend freelance.service)
         Route::prefix('freelance')->group(function () {
-            Route::get('/missions', [\App\Http\Controllers\API\JobController::class, 'index']);
-            Route::post('/missions/{job}/proposals', [\App\Http\Controllers\API\FreelanceProposalController::class, 'store']);
+            Route::get('/missions', [JobController::class, 'index']);
+            Route::post('/missions/{job}/proposals', [FreelanceProposalController::class, 'store']);
+        });
+
+        // Forum communautaire
+        Route::get('/forum/topics', [ForumController::class, 'index']);
+        Route::post('/forum/topics', [ForumController::class, 'store']);
+        Route::get('/forum/topics/{topic}', [ForumController::class, 'show']);
+        Route::post('/forum/topics/{topic}/comments', [ForumController::class, 'addComment']);
+        Route::delete('/forum/topics/{topic}', [ForumController::class, 'destroy']);
+
+        // Admin
+        Route::middleware('role:admin')->prefix('admin')->group(function () {
+            Route::get('/stats', [AdminController::class, 'stats']);
+            Route::get('/users', [AdminController::class, 'users']);
+            Route::get('/user/{user}', [AdminController::class, 'user']);
+            Route::put('/user/{user}/role', [AdminController::class, 'updateRole']);
+            Route::put('/user/{user}/ban', [AdminController::class, 'ban']);
+            Route::put('/user/{user}/verify', [AdminController::class, 'verify']);
+            Route::get('/jobs/pending', [AdminController::class, 'pendingJobs']);
+            Route::put('/jobs/{job}/approve', [AdminController::class, 'approveJob']);
+            Route::put('/jobs/{job}/reject', [AdminController::class, 'rejectJob']);
+            Route::get('/certifications', [AdminController::class, 'certifications']);
+            Route::put('/certifications/{id}/approve', [AdminController::class, 'approveCertification']);
         });
     });
 });

@@ -22,5 +22,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PlacementQuestionSeeder::class,
         ]);
+        $this->call(RoleSeeder::class);
     }
 }

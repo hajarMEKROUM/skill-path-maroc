@@ -35,7 +35,7 @@ class RolesAndPermissionsSeeder extends Seeder
         $roleFreelancer = Role::create(['name' => 'freelancer']);
         $roleFreelancer->givePermissionTo(['apply jobs']);
 
-        $roleEnterprise = Role::create(['name' => 'enterprise']);
-        $roleEnterprise->givePermissionTo(['post jobs']);
+        $roleCompany = Role::create(['name' => 'company']);
+        $roleCompany->givePermissionTo(['post jobs']);
     }
 }

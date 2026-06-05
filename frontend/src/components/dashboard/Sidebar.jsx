@@ -12,7 +12,7 @@ const getNavItems = (role) => {
   switch (role) {
     case 'student':
       return [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard/student' },
         { name: 'My Courses', icon: BookOpen, path: '/dashboard/courses' },
         { name: 'Certificates', icon: Award, path: '/dashboard/certificates' },
         { name: 'Messages', icon: MessageSquare, path: '/dashboard/messages' },
@@ -44,12 +44,11 @@ const getNavItems = (role) => {
       ];
     case 'admin':
       return [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-        { name: 'Users', icon: Users, path: '/dashboard/users' },
-        { name: 'Courses', icon: BookOpen, path: '/dashboard/courses-admin' },
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard/admin', end: false },
+        { name: 'Utilisateurs', icon: Users, path: '/dashboard/users' },
+        { name: 'Cours', icon: BookOpen, path: '/dashboard/courses-admin' },
         { name: 'Marketplace', icon: Briefcase, path: '/dashboard/marketplace' },
-        { name: 'Reports', icon: BarChart, path: '/dashboard/reports' },
-        { name: 'Settings', icon: Settings, path: '/dashboard/settings' },
+        { name: 'Rapports', icon: BarChart, path: '/dashboard/reports' },
       ];
     default:
       return [];
@@ -96,7 +95,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             <NavLink
               key={item.name}
               to={item.path}
-              end={item.path === '/dashboard'}
+              end={item.end !== false && (item.path === '/dashboard' || item.path === '/dashboard/admin')}
               className={({ isActive }) =>
                 `flex items-center px-3 py-2.5 rounded-lg transition-colors group relative ${
                   isActive

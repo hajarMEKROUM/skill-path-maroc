@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\FreelanceJob;
 use App\Models\User;
@@ -70,5 +71,55 @@ class AdminController extends Controller
         $user->update(['is_verified' => true]);
 
         return response()->json(['message' => 'User verified', 'user' => $user]);
+    }
+
+    public function pendingJobs()
+    {
+        $jobs = FreelanceJob::with('client')
+            ->where('status', 'open')
+            ->latest()
+            ->paginate(15);
+
+        return response()->json($jobs);
+    }
+
+    public function approveJob(FreelanceJob $job)
+    {
+        $job->update(['status' => 'open']);
+
+        return response()->json([
+            'message' => 'Offre approuvée.',
+            'job' => $job->load('client'),
+        ]);
+    }
+
+    public function rejectJob(FreelanceJob $job)
+    {
+        $job->update(['status' => 'cancelled']);
+
+        return response()->json([
+            'message' => 'Offre rejetée.',
+            'job' => $job->load('client'),
+        ]);
+    }
+
+    public function certifications()
+    {
+        $certificates = Certificate::with(['user', 'course'])
+            ->latest()
+            ->paginate(15);
+
+        return response()->json($certificates);
+    }
+
+    public function approveCertification($id)
+    {
+        $certificate = Certificate::findOrFail($id);
+        $certificate->update(['status' => 'validated']);
+
+        return response()->json([
+            'message' => 'Certification approuvée.',
+            'certification' => $certificate->load(['user', 'course']),
+        ]);
     }
 }

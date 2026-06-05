@@ -8,6 +8,7 @@ const CourseCard = ({ course }) => {
   // Mock data fallback if props are missing
   const {
     id = 1,
+    slug,
     title = 'Course Title',
     instructor = { name: 'Instructor Name' },
     price = 0,
@@ -72,7 +73,7 @@ const CourseCard = ({ course }) => {
           </span>
           
           <Link 
-            to={`/courses/${id}`}
+            to={`/courses/${slug || id}`}
             className="inline-flex items-center justify-center p-2 rounded-full bg-gray-50 text-gray-600 hover:bg-primary-50 hover:text-primary-600 transition-colors"
           >
             <ArrowRight size={20} />

@@ -12,7 +12,9 @@ class PlacementTest extends Model
     protected $fillable = [
         'user_id',
         'score',
-        'completed_at'
+        'path_category',
+        'level',
+        'completed_at',
     ];
 
     protected $casts = [

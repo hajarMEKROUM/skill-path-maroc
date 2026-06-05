@@ -1,6 +1,20 @@
 import { create } from 'zustand';
 import { courseService } from '../services/course.service';
 
+const buildCourseParams = (filters, page) => {
+  const params = { page };
+  if (filters.search?.trim()) {
+    params.search = filters.search.trim();
+  }
+  if (filters.level) {
+    params.level = filters.level;
+  }
+  if (filters.category) {
+    params.category = filters.category;
+  }
+  return params;
+};
+
 const useCoursesStore = create((set, get) => ({
   courses: [],
   myCourses: [],
@@ -20,34 +34,38 @@ const useCoursesStore = create((set, get) => ({
   },
 
   setFilters: (newFilters) => {
-    set((state) => ({ 
+    set((state) => ({
       filters: { ...state.filters, ...newFilters },
-      pagination: { ...state.pagination, currentPage: 1 } // Reset page on filter
+      pagination: { ...state.pagination, currentPage: 1 },
     }));
-    get().fetchCourses();
+    get().fetchCourses(1);
   },
 
   fetchCourses: async (page = 1) => {
     set({ isLoading: true, error: null });
     try {
       const { filters } = get();
-      const data = await courseService.getCourses({ ...filters, page });
-      
-      // Assume Laravel pagination structure: data.data is array, data.meta has pagination info
-      // Fallback if not paginated properly in backend yet
-      const courses = data.data || data; 
-      
-      set({ 
-        courses: courses, 
+      const params = buildCourseParams(filters, page);
+      const data = await courseService.getCourses(params);
+
+      const raw = data.data ?? data;
+      const courses = Array.isArray(raw) ? raw : [];
+
+      set({
+        courses,
         isLoading: false,
         pagination: {
-          currentPage: data.current_page || 1,
-          lastPage: data.last_page || 1,
-          total: data.total || courses.length,
-        }
+          currentPage: data.meta?.current_page ?? data.current_page ?? page,
+          lastPage: data.meta?.last_page ?? data.last_page ?? 1,
+          total: data.meta?.total ?? data.total ?? courses.length,
+        },
       });
     } catch (error) {
-      set({ error: error.message, isLoading: false });
+      set({
+        error: error.response?.data?.message || error.message,
+        isLoading: false,
+        courses: [],
+      });
     }
   },
 
@@ -55,9 +73,16 @@ const useCoursesStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const data = await courseService.getCourseDetails(id);
-      set({ currentCourse: data, isLoading: false });
+      const course = data.data ?? data;
+      set({ currentCourse: course, isLoading: false });
+      return course;
     } catch (error) {
-      set({ error: error.message, isLoading: false });
+      set({
+        error: error.response?.data?.message || error.message,
+        isLoading: false,
+        currentCourse: null,
+      });
+      throw error;
     }
   },
 
@@ -65,22 +90,26 @@ const useCoursesStore = create((set, get) => ({
     set({ isEnrolling: true, error: null });
     try {
       await courseService.enroll(id);
-      // Refresh my courses after enrollment
       await get().fetchMyCourses();
       set({ isEnrolling: false });
     } catch (error) {
-      set({ error: error.message, isEnrolling: false });
+      set({
+        error: error.response?.data?.message || error.message,
+        isEnrolling: false,
+      });
+      throw error;
     }
   },
 
   fetchMyCourses: async () => {
     try {
       const data = await courseService.getMyCourses();
-      set({ myCourses: data.data || data });
+      const raw = data.data ?? data;
+      set({ myCourses: Array.isArray(raw) ? raw : [] });
     } catch (error) {
-      console.error("Failed to fetch my courses", error);
+      console.error('Failed to fetch my courses', error);
     }
-  }
+  },
 }));
 
 export default useCoursesStore;

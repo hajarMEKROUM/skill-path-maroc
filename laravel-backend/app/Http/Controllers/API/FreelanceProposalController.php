@@ -44,4 +44,14 @@ class FreelanceProposalController extends Controller
             ],
         ], 201);
     }
+
+    public function myProposals(Request $request)
+    {
+        $proposals = Proposal::where('freelancer_id', $request->user()->id)
+            ->with(['job.client'])
+            ->latest()
+            ->paginate(15);
+
+        return response()->json($proposals);
+    }
 }

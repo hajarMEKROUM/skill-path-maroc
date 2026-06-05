@@ -9,7 +9,14 @@ class Certificate extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['user_id', 'course_id', 'certificate_number', 'issued_at'];
+    protected $fillable = [
+        'user_id',
+        'course_id',
+        'certificate_number',
+        'status',
+        'certificate_url',
+        'issued_at',
+    ];
 
     protected $casts = [
         'issued_at' => 'datetime',

@@ -9,10 +9,61 @@ use Illuminate\Http\Request;
 
 class JobController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $jobs = FreelanceJob::where('status', 'open')->with('client')->paginate(15);
-        return response()->json($jobs);
+        $query = FreelanceJob::query()
+            ->where('status', 'open')
+            ->with('client');
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($builder) use ($search) {
+                $builder->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
+            });
+        }
+
+        if ($request->filled('category')) {
+            $category = $request->input('category');
+            $keywords = $this->categoryKeywords($category);
+
+            $query->where(function ($builder) use ($keywords) {
+                foreach ($keywords as $keyword) {
+                    $builder->orWhere('title', 'like', '%'.$keyword.'%')
+                        ->orWhere('description', 'like', '%'.$keyword.'%');
+                }
+            });
+        }
+
+        if ($request->filled('budget_min')) {
+            $query->where(function ($builder) use ($request) {
+                $builder->where('budget_max', '>=', $request->input('budget_min'))
+                    ->orWhere('budget_min', '>=', $request->input('budget_min'));
+            });
+        }
+
+        if ($request->filled('budget_max')) {
+            $query->where(function ($builder) use ($request) {
+                $builder->where('budget_min', '<=', $request->input('budget_max'))
+                    ->orWhere('budget_max', '<=', $request->input('budget_max'));
+            });
+        }
+
+        $perPage = $request->integer('per_page', 15);
+
+        return response()->json($query->latest()->paginate($perPage));
+    }
+
+    protected function categoryKeywords(string $category): array
+    {
+        return match ($category) {
+            'web-dev' => ['web', 'react', 'laravel', 'javascript', 'frontend', 'vue'],
+            'mobile-dev' => ['mobile', 'flutter', 'dart', 'ios', 'android', 'react native'],
+            'ui-ux' => ['ui', 'ux', 'design', 'figma', 'interface'],
+            'backend' => ['backend', 'api', 'php', 'node', 'server'],
+            'data' => ['data', 'python', 'machine', 'ai', 'analytics'],
+            default => [$category],
+        };
     }
 
     public function store(Request $request)
@@ -33,13 +84,14 @@ class JobController extends Controller
 
         return response()->json([
             'message' => 'Job posted successfully',
-            'job' => $job
+            'job' => $job,
         ], 201);
     }
 
     public function show($id)
     {
         $job = FreelanceJob::with(['client', 'proposals.freelancer'])->findOrFail($id);
+
         return response()->json($job);
     }
 

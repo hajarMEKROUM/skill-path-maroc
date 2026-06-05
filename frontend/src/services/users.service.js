@@ -15,19 +15,19 @@ export const usersService = {
 
   // Update user role (Spatie implementation in backend)
   updateRole: async (id, role) => {
-    const response = await api.patch(`/admin/users/${id}/role`, { role });
+    const response = await api.put(`/admin/user/${id}/role`, { role });
     return response.data;
   },
 
   // Ban or suspend user
   banUser: async (id, reason) => {
-    const response = await api.patch(`/admin/users/${id}/ban`, { reason });
+    const response = await api.put(`/admin/user/${id}/ban`, { reason });
     return response.data;
   },
 
   // Verify user manually
   verifyUser: async (id) => {
-    const response = await api.patch(`/admin/users/${id}/verify`);
+    const response = await api.put(`/admin/user/${id}/verify`);
     return response.data;
   },
 

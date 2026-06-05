@@ -25,12 +25,16 @@ class CoursePolicy
 
     public function update(User $user, Course $course): bool
     {
-        return $user->can('manage courses') || $user->id === $course->instructor_id;
+        return $user->role === 'admin'
+            || $user->can('manage courses')
+            || $user->id === $course->instructor_id;
     }
 
     public function delete(User $user, Course $course): bool
     {
-        return $user->can('manage courses') || $user->id === $course->instructor_id;
+        return $user->role === 'admin'
+            || $user->can('manage courses')
+            || $user->id === $course->instructor_id;
     }
 
     public function restore(User $user, Course $course): bool

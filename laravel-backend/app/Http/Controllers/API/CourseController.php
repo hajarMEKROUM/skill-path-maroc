@@ -23,10 +23,47 @@ class CourseController extends Controller
         $this->courseService = $courseService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $courses = $this->courseService->getAllPublishedCourses();
-        return CourseResource::collection($courses);
+        $query = Course::query()->with('instructor');
+
+        $isAdminList = $request->user()
+            && $request->user()->role === 'admin'
+            && $request->boolean('admin');
+
+        if (! $isAdminList) {
+            $query->where('status', 'published');
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($builder) use ($search) {
+                $builder->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%')
+                    ->orWhereHas('instructor', function ($q) use ($search) {
+                        $q->where('name', 'like', '%'.$search.'%');
+                    });
+            });
+        }
+
+        if ($request->filled('level')) {
+            $query->where('level', $request->input('level'));
+        }
+
+        if ($request->filled('category')) {
+            $category = $request->input('category');
+            $query->where(function ($builder) use ($category) {
+                $builder->where('title', 'like', '%'.$category.'%')
+                    ->orWhere('description', 'like', '%'.$category.'%')
+                    ->orWhere('level', 'like', '%'.$category.'%');
+            });
+        }
+
+        $perPage = $request->integer('per_page', 15);
+
+        return CourseResource::collection(
+            $query->latest()->paginate($perPage)
+        );
     }
 
     public function store(StoreCourseRequest $request)
@@ -35,21 +72,33 @@ class CourseController extends Controller
 
         return response()->json([
             'message' => 'Course created successfully',
-            'course' => new CourseResource($course)
+            'course' => new CourseResource($course),
         ], 201);
     }
 
-    public function show($id)
+    public function show($courseIdentifier)
     {
-        $course = $this->courseService->findCourse($id);
-        return new CourseResource($course);
+        $course = Course::query()
+            ->where(function ($query) use ($courseIdentifier) {
+                $query->where('slug', $courseIdentifier);
+                if (is_numeric($courseIdentifier)) {
+                    $query->orWhere('id', $courseIdentifier);
+                }
+            })
+            ->with(['lessons', 'instructor'])
+            ->first();
+
+        if (! $course || $course->status !== 'published') {
+            return response()->json(['message' => 'Cours introuvable.'], 404);
+        }
+
+        return (new CourseResource($course))->response();
     }
 
     public function update(UpdateCourseRequest $request, $id)
     {
-        // Authorization is handled in UpdateCourseRequest
         $course = $this->courseService->updateCourse($id, $request->validated());
-        
+
         return new CourseResource($course);
     }
 
@@ -75,26 +124,34 @@ class CourseController extends Controller
 
     public function myCourses(Request $request)
     {
-        $enrollments = $this->courseService->getUserEnrollments($request->user());
-        return response()->json($enrollments);
+        $user = $request->user();
+        $courses = $user->enrollments()
+            ->with('course')
+            ->get()
+            ->pluck('course')
+            ->filter();
+
+        return response()->json(['data' => $courses->values()]);
     }
 
     public function lessons(Request $request, Course $course)
     {
         $data = $this->courseService->getCourseLessonsWithProgress($course, $request->user());
+
         return response()->json($data);
     }
 
     public function lesson(Course $course, Lesson $lesson)
     {
         abort_unless($lesson->course_id === $course->id, 404);
+
         return response()->json($lesson->load('quiz.questions'));
     }
 
     public function completeLesson(Request $request, Course $course, Lesson $lesson)
     {
         abort_unless($lesson->course_id === $course->id, 404);
-        
+
         $this->courseService->markLessonComplete($lesson, $request->user());
 
         return response()->json(['message' => 'Lesson marked as complete']);
@@ -107,7 +164,11 @@ class CourseController extends Controller
             'time_watched' => 'required|integer|min:0',
         ]);
 
-        $this->courseService->updateLessonProgress($validated['lesson_id'], $request->user(), $validated['time_watched']);
+        $this->courseService->updateLessonProgress(
+            $validated['lesson_id'],
+            $request->user(),
+            $validated['time_watched']
+        );
 
         return response()->json(['message' => 'Progress saved']);
     }
