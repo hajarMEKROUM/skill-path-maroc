@@ -8,8 +8,6 @@ import StudentCourses from './pages/dashboard/StudentCourses';
 import MyCertifications from './pages/dashboard/MyCertifications';
 import Messages from './pages/dashboard/Messages';
 import Settings from './pages/dashboard/Settings';
-import InstructorDashboard from './pages/dashboard/InstructorDashboard';
-import FreelancerDashboard from './pages/dashboard/FreelancerDashboard';
 import EnterpriseDashboard from './pages/dashboard/EnterpriseDashboard';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
@@ -17,6 +15,7 @@ import AdminCourses from './pages/admin/AdminCourses';
 import AdminMarketplace from './pages/admin/AdminMarketplace';
 import AdminReports from './pages/admin/AdminReports';
 import useAuthStore from './store/authStore';
+import { dashboardPathForRole } from './utils/roles';
 
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
@@ -24,6 +23,7 @@ import ForgotPassword from './pages/auth/ForgotPassword';
 import ProtectedRoute from './routes/ProtectedRoute';
 import CourseCatalog from './pages/learning/CourseCatalog';
 import CourseDetail from './pages/learning/CourseDetail';
+import LearningPlayer from './pages/learning/LearningPlayer';
 import PlacementTest from './pages/learning/PlacementTest';
 import MissionsFeed from './pages/freelance/MissionsFeed';
 import Forum from './pages/community/Forum';
@@ -74,24 +74,19 @@ function App() {
         <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
           <Route index element={<DashboardRedirect />} />
 
-          <Route element={<ProtectedRoute allowedRoles={['student']} />}>
-            <Route path="student" element={<StudentDashboard />} />
+          <Route element={<ProtectedRoute allowedRoles={['user']} />}>
+            <Route path="user" element={<StudentDashboard />} />
             <Route path="courses" element={<StudentCourses />} />
             <Route path="certificates" element={<MyCertifications />} />
             <Route path="messages" element={<Messages />} />
             <Route path="settings" element={<Settings />} />
+            <Route path="learn/:courseId" element={<LearningPlayer />} />
           </Route>
 
-          <Route element={<ProtectedRoute allowedRoles={['instructor']} />}>
-            <Route path="instructor" element={<InstructorDashboard />} />
-          </Route>
-
-          <Route element={<ProtectedRoute allowedRoles={['freelancer']} />}>
-            <Route path="freelancer" element={<FreelancerDashboard />} />
-          </Route>
-
-          <Route element={<ProtectedRoute allowedRoles={['company', 'enterprise']} />}>
+          <Route element={<ProtectedRoute allowedRoles={['entreprise']} />}>
             <Route path="enterprise" element={<EnterpriseDashboard />} />
+            <Route path="messages" element={<Messages />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
@@ -101,6 +96,11 @@ function App() {
             <Route path="marketplace" element={<AdminMarketplace />} />
             <Route path="reports" element={<AdminReports />} />
           </Route>
+
+          {/* Legacy redirects */}
+          <Route path="student" element={<Navigate to="/dashboard/user" replace />} />
+          <Route path="instructor" element={<Navigate to="/dashboard/user" replace />} />
+          <Route path="freelancer" element={<Navigate to="/dashboard/user" replace />} />
         </Route>
       </Routes>
     </Router>
@@ -112,16 +112,7 @@ const DashboardRedirect = () => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  const roleMap = {
-    instructor: '/dashboard/instructor',
-    freelancer: '/dashboard/freelancer',
-    company: '/dashboard/enterprise',
-    enterprise: '/dashboard/enterprise',
-    admin: '/dashboard/admin',
-    student: '/dashboard/student',
-  };
-
-  return <Navigate to={roleMap[user.role] || '/dashboard/student'} replace />;
+  return <Navigate to={dashboardPathForRole(user.role)} replace />;
 };
 
 export default App;

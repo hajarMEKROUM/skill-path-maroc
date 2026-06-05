@@ -11,9 +11,11 @@ class Lesson extends Model
 
     protected $fillable = [
         'course_id',
+        'module_id',
         'title',
         'slug',
         'content',
+        'content_type',
         'video_url',
         'duration_seconds',
         'sort_order',
@@ -27,6 +29,11 @@ class Lesson extends Model
     public function course()
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function module()
+    {
+        return $this->belongsTo(CourseModule::class, 'module_id');
     }
 
     public function quiz()

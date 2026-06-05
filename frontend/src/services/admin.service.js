@@ -11,18 +11,23 @@ export const adminService = {
     return response.data;
   },
 
-  banUser: async (userId, reason) => {
-    const response = await api.patch(`/admin/users/${userId}/ban`, { reason });
+  createUser: async (payload) => {
+    const response = await api.post('/admin/users', payload);
     return response.data;
   },
 
-  approveCourse: async (courseId) => {
-    const response = await api.patch(`/admin/courses/${courseId}/approve`);
+  createCourse: async (payload) => {
+    const response = await api.post('/admin/courses', payload);
     return response.data;
   },
-  
-  getReports: async () => {
-    const response = await api.get('/admin/reports');
+
+  createJob: async (payload) => {
+    const response = await api.post('/admin/jobs', payload);
     return response.data;
-  }
+  },
+
+  banUser: async (userId, reason) => {
+    const response = await api.put(`/admin/user/${userId}/ban`, { reason });
+    return response.data;
+  },
 };

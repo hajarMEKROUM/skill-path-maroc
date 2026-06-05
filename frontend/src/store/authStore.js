@@ -1,5 +1,9 @@
 import { create } from "zustand";
 import api, { getCsrf } from "../services/api";
+import { normalizeRole } from "../utils/roles";
+
+const withNormalizedRole = (user) =>
+  user ? { ...user, role: normalizeRole(user.role) } : user;
 
 const useAuthStore = create((set) => ({
   user: null,
@@ -17,13 +21,14 @@ const useAuthStore = create((set) => ({
       // ✅ LOGIN (API v1)
       const response = await api.post("/login", credentials);
 
+      const user = withNormalizedRole(response.data.user);
       set({
-        user: response.data.user,
+        user,
         isAuthenticated: true,
         isLoading: false,
       });
 
-      return response.data.user;
+      return user;
     } catch (error) {
       set({
         error: error.response?.data?.message || "Login failed",
@@ -41,13 +46,14 @@ const useAuthStore = create((set) => ({
 
       const response = await api.post("/register", userData);
 
+      const user = withNormalizedRole(response.data.user);
       set({
-        user: response.data.user,
+        user,
         isAuthenticated: true,
         isLoading: false,
       });
 
-      return response.data.user;
+      return user;
     } catch (error) {
       set({
         error: error.response?.data?.message || "Registration failed",
@@ -75,7 +81,7 @@ const useAuthStore = create((set) => ({
       const response = await api.get("/me");
 
       set({
-        user: response.data.data,
+        user: withNormalizedRole(response.data.data ?? response.data.user),
         isAuthenticated: true,
         isLoading: false,
       });

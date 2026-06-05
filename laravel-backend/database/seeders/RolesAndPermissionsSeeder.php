@@ -3,39 +3,35 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
-use App\Models\User;
+use Spatie\Permission\Models\Role;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // create permissions
-        Permission::create(['name' => 'manage users']);
-        Permission::create(['name' => 'manage courses']);
-        Permission::create(['name' => 'create courses']);
-        Permission::create(['name' => 'take courses']);
-        Permission::create(['name' => 'post jobs']);
-        Permission::create(['name' => 'apply jobs']);
+        $permissions = [
+            'manage users',
+            'manage courses',
+            'create courses',
+            'take courses',
+            'post jobs',
+            'apply jobs',
+        ];
 
-        // create roles and assign created permissions
-        $roleAdmin = Role::create(['name' => 'admin']);
-        $roleAdmin->givePermissionTo(Permission::all());
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
+        }
 
-        $roleInstructor = Role::create(['name' => 'instructor']);
-        $roleInstructor->givePermissionTo(['create courses']);
+        $roleAdmin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
+        $roleAdmin->syncPermissions(Permission::all());
 
-        $roleStudent = Role::create(['name' => 'student']);
-        $roleStudent->givePermissionTo(['take courses']);
+        $roleUser = Role::firstOrCreate(['name' => 'user', 'guard_name' => 'web']);
+        $roleUser->syncPermissions(['take courses', 'apply jobs', 'create courses']);
 
-        $roleFreelancer = Role::create(['name' => 'freelancer']);
-        $roleFreelancer->givePermissionTo(['apply jobs']);
-
-        $roleCompany = Role::create(['name' => 'company']);
-        $roleCompany->givePermissionTo(['post jobs']);
+        $roleEntreprise = Role::firstOrCreate(['name' => 'entreprise', 'guard_name' => 'web']);
+        $roleEntreprise->syncPermissions(['post jobs', 'take courses']);
     }
 }

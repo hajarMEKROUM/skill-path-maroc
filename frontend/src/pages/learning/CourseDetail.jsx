@@ -139,6 +139,44 @@ const CourseDetail = () => {
             </p>
           </div>
 
+          {(course.modules?.length > 0 || course.lessons?.length > 0) && (
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Contenu du cours</h2>
+              {course.modules?.length > 0 ? (
+                <div className="space-y-4">
+                  {course.modules.map((module) => (
+                    <div key={module.id} className="border border-gray-100 rounded-xl p-4">
+                      <h3 className="font-medium text-gray-900">{module.title}</h3>
+                      {module.description && (
+                        <p className="text-sm text-gray-500 mt-1">{module.description}</p>
+                      )}
+                      <ul className="mt-3 space-y-2">
+                        {(module.lessons || []).map((lesson) => (
+                          <li key={lesson.id} className="text-sm text-gray-600 flex items-center gap-2">
+                            <BookOpen size={14} className="text-primary-500" />
+                            {lesson.title}
+                            {lesson.content_type && (
+                              <span className="text-xs text-gray-400">({lesson.content_type})</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <ul className="space-y-2 border border-gray-100 rounded-xl p-4">
+                  {course.lessons.map((lesson) => (
+                    <li key={lesson.id} className="text-sm text-gray-600 flex items-center gap-2">
+                      <BookOpen size={14} className="text-primary-500" />
+                      {lesson.title}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           {enrollMessage && (
             <div
               className={`mb-4 px-4 py-3 rounded-lg text-sm ${
@@ -151,14 +189,25 @@ const CourseDetail = () => {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={handleEnroll}
-            disabled={isEnrolling}
-            className="btn-primary py-3 px-8 text-base disabled:opacity-50"
-          >
-            {isEnrolling ? 'Inscription...' : "S'inscrire au cours"}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleEnroll}
+              disabled={isEnrolling}
+              className="btn-primary py-3 px-8 text-base disabled:opacity-50"
+            >
+              {isEnrolling ? 'Inscription...' : "S'inscrire au cours"}
+            </button>
+            {isAuthenticated && (
+              <button
+                type="button"
+                onClick={() => navigate(`/dashboard/learn/${course.id}`)}
+                className="py-3 px-8 text-base border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50"
+              >
+                Accéder au parcours
+              </button>
+            )}
+          </div>
 
           {!isAuthenticated && (
             <p className="text-sm text-gray-500 mt-3">

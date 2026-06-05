@@ -21,6 +21,12 @@ class AuthController extends Controller
 
         $roleValue = $validated['role'] instanceof \UnitEnum ? $validated['role']->value : $validated['role'];
 
+        if ($roleValue === 'admin') {
+            throw ValidationException::withMessages([
+                'role' => ['Le rôle administrateur ne peut pas être choisi à l\'inscription.'],
+            ]);
+        }
+
         $user = User::create([
             'name'     => $validated['name'],
             'email'    => $validated['email'],

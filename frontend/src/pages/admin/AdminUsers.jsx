@@ -1,15 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { usersService } from '../../services/users.service';
+import useAuthStore from '../../store/authStore';
+import { isAdmin } from '../../utils/roles';
 
-const ROLES = ['student', 'instructor', 'company', 'admin'];
+const ROLES = ['user', 'entreprise', 'admin'];
 
 const AdminUsers = () => {
+  const { user: currentUser } = useAuthStore();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ lastPage: 1, total: 0 });
   const [actionLoading, setActionLoading] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user',
+  });
 
   const fetchUsers = async (pageNum = 1) => {
     setLoading(true);
@@ -60,6 +70,22 @@ const AdminUsers = () => {
     }
   };
 
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setActionLoading('create');
+    setError(null);
+    try {
+      await usersService.createUser(createForm);
+      setShowCreate(false);
+      setCreateForm({ name: '', email: '', password: '', role: 'user' });
+      await fetchUsers(page);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur lors de la création.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleVerify = async (userId) => {
     setActionLoading(userId);
     try {
@@ -74,12 +100,70 @@ const AdminUsers = () => {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des utilisateurs</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          {pagination.total} utilisateur{pagination.total !== 1 ? 's' : ''} au total
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gestion des utilisateurs</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {pagination.total} utilisateur{pagination.total !== 1 ? 's' : ''} au total
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700"
+        >
+          {showCreate ? 'Annuler' : 'Ajouter un utilisateur'}
+        </button>
       </div>
+
+      {showCreate && (
+        <form
+          onSubmit={handleCreateUser}
+          className="bg-white rounded-2xl border border-gray-100 shadow-soft p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
+        >
+          <input
+            type="text"
+            placeholder="Nom"
+            required
+            value={createForm.name}
+            onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            required
+            value={createForm.email}
+            onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <input
+            type="password"
+            placeholder="Mot de passe (min. 8)"
+            required
+            minLength={8}
+            value={createForm.password}
+            onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <select
+            value={createForm.role}
+            onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          >
+            <option value="user">Utilisateur</option>
+            <option value="entreprise">Entreprise</option>
+            {isAdmin(currentUser?.role) && <option value="admin">Administrateur</option>}
+          </select>
+          <button
+            type="submit"
+            disabled={actionLoading === 'create'}
+            className="md:col-span-2 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+          >
+            Créer l&apos;utilisateur
+          </button>
+        </form>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -121,12 +205,12 @@ const AdminUsers = () => {
                     <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
                     <td className="px-6 py-4">
                       <select
-                        value={user.role || 'student'}
-                        disabled={actionLoading === user.id}
+                        value={user.role || 'user'}
+                        disabled={actionLoading === user.id || user.id === currentUser?.id}
                         onChange={(e) => handleRoleChange(user.id, e.target.value)}
                         className="text-sm border border-gray-200 rounded-lg px-2 py-1"
                       >
-                        {ROLES.map((r) => (
+                        {ROLES.filter((r) => r !== 'admin' || isAdmin(currentUser?.role)).map((r) => (
                           <option key={r} value={r}>
                             {r}
                           </option>

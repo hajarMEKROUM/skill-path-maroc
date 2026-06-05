@@ -10,7 +10,7 @@ const Register = () => {
     email: '', 
     password: '', 
     confirmPassword: '',
-    role: 'student' 
+    role: 'user' 
   });
   const [formError, setFormError] = useState('');
   const { register, isLoading, error, isAuthenticated } = useAuthStore();
@@ -130,10 +130,8 @@ const Register = () => {
                     onChange={handleChange}
                     className="focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-lg py-2.5 border outline-none bg-white cursor-pointer"
                   >
-                    <option value="student">Student</option>
-                    <option value="instructor">Instructor</option>
-                    <option value="freelancer">Freelancer</option>
-                    <option value="company">Enterprise</option>
+                    <option value="user">Utilisateur</option>
+                    <option value="entreprise">Entreprise</option>
                   </select>
                 </div>
               </div>

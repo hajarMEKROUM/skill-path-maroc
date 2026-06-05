@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { adminService } from '../../services/admin.service';
 
 const AdminCourses = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    title: '',
+    description: '',
+    price: 0,
+    level: 'beginner',
+    status: 'draft',
+  });
 
   const fetchCourses = async () => {
     setLoading(true);
@@ -26,6 +35,22 @@ const AdminCourses = () => {
   useEffect(() => {
     fetchCourses();
   }, []);
+
+  const handleCreateCourse = async (e) => {
+    e.preventDefault();
+    setActionLoading('create');
+    setError(null);
+    try {
+      await adminService.createCourse(createForm);
+      setShowCreate(false);
+      setCreateForm({ title: '', description: '', price: 0, level: 'beginner', status: 'draft' });
+      await fetchCourses();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur lors de la création du cours.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const togglePublish = async (course) => {
     const nextStatus = course.status === 'published' ? 'draft' : 'published';
@@ -55,10 +80,78 @@ const AdminCourses = () => {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Gestion des cours</h1>
-        <p className="text-gray-500 text-sm mt-1">Publier, dépublier ou supprimer les cours de la plateforme.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gestion des cours</h1>
+          <p className="text-gray-500 text-sm mt-1">Publier, dépublier ou supprimer les cours de la plateforme.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700"
+        >
+          {showCreate ? 'Annuler' : 'Ajouter un cours'}
+        </button>
       </div>
+
+      {showCreate && (
+        <form
+          onSubmit={handleCreateCourse}
+          className="bg-white rounded-2xl border border-gray-100 shadow-soft p-6 space-y-4"
+        >
+          <input
+            type="text"
+            placeholder="Titre"
+            required
+            value={createForm.title}
+            onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <textarea
+            placeholder="Description"
+            required
+            rows={4}
+            value={createForm.description}
+            onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="Prix (MAD)"
+              value={createForm.price}
+              onChange={(e) => setCreateForm({ ...createForm, price: e.target.value })}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <select
+              value={createForm.level}
+              onChange={(e) => setCreateForm({ ...createForm, level: e.target.value })}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="beginner">Débutant</option>
+              <option value="intermediate">Intermédiaire</option>
+              <option value="expert">Expert</option>
+            </select>
+            <select
+              value={createForm.status}
+              onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="draft">Brouillon</option>
+              <option value="published">Publié</option>
+            </select>
+          </div>
+          <button
+            type="submit"
+            disabled={actionLoading === 'create'}
+            className="py-2 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+          >
+            Créer le cours
+          </button>
+        </form>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">

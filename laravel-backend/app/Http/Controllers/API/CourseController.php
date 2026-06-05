@@ -28,7 +28,7 @@ class CourseController extends Controller
         $query = Course::query()->with('instructor');
 
         $isAdminList = $request->user()
-            && $request->user()->role === 'admin'
+            && \App\Support\RoleNormalizer::isAdmin($request->user()->role)
             && $request->boolean('admin');
 
         if (! $isAdminList) {
@@ -85,7 +85,7 @@ class CourseController extends Controller
                     $query->orWhere('id', $courseIdentifier);
                 }
             })
-            ->with(['lessons', 'instructor'])
+            ->with(['lessons', 'modules.lessons', 'instructor'])
             ->first();
 
         if (! $course || $course->status !== 'published') {
@@ -152,9 +152,13 @@ class CourseController extends Controller
     {
         abort_unless($lesson->course_id === $course->id, 404);
 
-        $this->courseService->markLessonComplete($lesson, $request->user());
+        $certificate = $this->courseService->markLessonComplete($lesson, $request->user());
 
-        return response()->json(['message' => 'Lesson marked as complete']);
+        return response()->json([
+            'message' => 'Lesson marked as complete',
+            'certificate' => $certificate,
+            'course_completed' => (bool) $certificate,
+        ]);
     }
 
     public function updateProgress(Request $request)

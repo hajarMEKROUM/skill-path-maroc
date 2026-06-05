@@ -7,10 +7,18 @@ use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\FreelanceJob;
 use App\Models\User;
+use App\Services\CourseService;
+use App\Support\RoleNormalizer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
+    public function __construct(protected CourseService $courseService)
+    {
+    }
+
     public function stats()
     {
         return response()->json([
@@ -36,7 +44,7 @@ class AdminController extends Controller
         }
 
         if ($request->filled('role')) {
-            $query->where('role', $request->role);
+            $query->where('role', RoleNormalizer::normalize($request->role));
         }
 
         return response()->json($query->latest()->paginate($request->integer('per_page', 15)));
@@ -47,14 +55,55 @@ class AdminController extends Controller
         return response()->json($user->load('roles', 'courses', 'enrollments.course'));
     }
 
-    public function updateRole(Request $request, User $user)
+    public function storeUser(Request $request)
     {
         $validated = $request->validate([
-            'role' => 'required|in:student,instructor,company,admin',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email',
+            'password' => 'required|string|min:8',
+            'role' => ['required', Rule::in(RoleNormalizer::ROLES)],
+        ]);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => $validated['password'],
+            'role' => $validated['role'],
+            'status' => 'active',
+            'is_verified' => true,
         ]);
 
         $user->syncRoles([$validated['role']]);
-        $user->update(['role' => $validated['role']]);
+
+        return response()->json([
+            'message' => 'Utilisateur créé.',
+            'user' => $user->load('roles'),
+        ], 201);
+    }
+
+    public function updateRole(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'role' => ['required', Rule::in(RoleNormalizer::ROLES)],
+        ]);
+
+        $actor = $request->user();
+        $newRole = $validated['role'];
+
+        if ($newRole === 'admin' && ! RoleNormalizer::isAdmin($actor->getAttributes()['role'] ?? $actor->role)) {
+            return response()->json([
+                'message' => 'Seuls les administrateurs peuvent attribuer le rôle admin.',
+            ], 403);
+        }
+
+        if ($user->id === $actor->id && $newRole !== 'admin') {
+            return response()->json([
+                'message' => 'Vous ne pouvez pas retirer votre propre rôle administrateur.',
+            ], 403);
+        }
+
+        $user->syncRoles([$newRole]);
+        $user->update(['role' => $newRole]);
 
         return response()->json($user->load('roles'));
     }
@@ -71,6 +120,55 @@ class AdminController extends Controller
         $user->update(['is_verified' => true]);
 
         return response()->json(['message' => 'User verified', 'user' => $user]);
+    }
+
+    public function storeCourse(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'price' => 'nullable|numeric|min:0',
+            'level' => 'nullable|in:beginner,intermediate,expert',
+            'status' => 'nullable|in:draft,published,archived',
+            'thumbnail' => 'nullable|string|max:2048',
+            'instructor_id' => 'nullable|exists:users,id',
+        ]);
+
+        $instructorId = $validated['instructor_id'] ?? $request->user()->id;
+        unset($validated['instructor_id']);
+
+        $course = $this->courseService->createCourse($validated, $instructorId);
+
+        return response()->json([
+            'message' => 'Cours créé.',
+            'course' => $course->load('instructor'),
+        ], 201);
+    }
+
+    public function storeJob(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'budget_min' => 'nullable|numeric|min:0',
+            'budget_max' => 'nullable|numeric|gte:budget_min',
+            'deadline' => 'nullable|date|after:today',
+            'status' => 'nullable|in:open,in_progress,completed,cancelled',
+            'client_id' => 'nullable|exists:users,id',
+        ]);
+
+        $clientId = $validated['client_id'] ?? $request->user()->id;
+        unset($validated['client_id']);
+
+        $job = FreelanceJob::create(array_merge($validated, [
+            'client_id' => $clientId,
+            'status' => $validated['status'] ?? 'open',
+        ]));
+
+        return response()->json([
+            'message' => 'Offre créée.',
+            'job' => $job->load('client'),
+        ], 201);
     }
 
     public function pendingJobs()

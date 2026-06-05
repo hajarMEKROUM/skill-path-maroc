@@ -1,11 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
+import { adminService } from '../../services/admin.service';
 
 const AdminMarketplace = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [actionLoading, setActionLoading] = useState(null);
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    title: '',
+    description: '',
+    budget_min: '',
+    budget_max: '',
+    status: 'open',
+  });
 
   const fetchJobs = async () => {
     setLoading(true);
@@ -42,6 +51,26 @@ const AdminMarketplace = () => {
     fetchJobs();
   }, []);
 
+  const handleCreateJob = async (e) => {
+    e.preventDefault();
+    setActionLoading('create');
+    setError(null);
+    try {
+      await adminService.createJob({
+        ...createForm,
+        budget_min: createForm.budget_min || null,
+        budget_max: createForm.budget_max || null,
+      });
+      setShowCreate(false);
+      setCreateForm({ title: '', description: '', budget_min: '', budget_max: '', status: 'open' });
+      await fetchJobs();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur lors de la création de l\'offre.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleApprove = async (jobId) => {
     setActionLoading(jobId);
     try {
@@ -69,10 +98,68 @@ const AdminMarketplace = () => {
 
   return (
     <div className="space-y-6 p-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Marketplace / Jobs</h1>
-        <p className="text-gray-500 text-sm mt-1">Modérer les offres freelance publiées sur la plateforme.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Marketplace / Jobs</h1>
+          <p className="text-gray-500 text-sm mt-1">Modérer les offres freelance publiées sur la plateforme.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowCreate((v) => !v)}
+          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700"
+        >
+          {showCreate ? 'Annuler' : 'Ajouter une offre'}
+        </button>
       </div>
+
+      {showCreate && (
+        <form
+          onSubmit={handleCreateJob}
+          className="bg-white rounded-2xl border border-gray-100 shadow-soft p-6 space-y-4"
+        >
+          <input
+            type="text"
+            placeholder="Titre de l&apos;offre"
+            required
+            value={createForm.title}
+            onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <textarea
+            placeholder="Description"
+            required
+            rows={4}
+            value={createForm.description}
+            onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
+          />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <input
+              type="number"
+              min="0"
+              placeholder="Budget min (MAD)"
+              value={createForm.budget_min}
+              onChange={(e) => setCreateForm({ ...createForm, budget_min: e.target.value })}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <input
+              type="number"
+              min="0"
+              placeholder="Budget max (MAD)"
+              value={createForm.budget_max}
+              onChange={(e) => setCreateForm({ ...createForm, budget_max: e.target.value })}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={actionLoading === 'create'}
+            className="py-2 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+          >
+            Créer l&apos;offre
+          </button>
+        </form>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">

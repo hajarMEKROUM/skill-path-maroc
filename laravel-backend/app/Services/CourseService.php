@@ -11,11 +11,10 @@ use Illuminate\Support\Facades\DB;
 
 class CourseService
 {
-    protected $courseRepository;
-
-    public function __construct(CourseRepositoryInterface $courseRepository)
-    {
-        $this->courseRepository = $courseRepository;
+    public function __construct(
+        protected CourseRepositoryInterface $courseRepository,
+        protected CertificateService $certificateService
+    ) {
     }
 
     public function createCourse(array $data, $instructorId)
@@ -75,18 +74,32 @@ class CourseService
                 ->all()
             : [];
 
+        $modules = $course->modules()
+            ->with(['lessons' => fn ($q) => $q->orderBy('sort_order')])
+            ->orderBy('sort_order')
+            ->get();
+
+        $lessons = $course->lessons()->orderBy('sort_order')->get();
+
         return [
-            'lessons' => $course->lessons()->orderBy('sort_order')->get(),
+            'modules' => $modules,
+            'lessons' => $lessons,
             'completed_ids' => $completed,
         ];
     }
 
-    public function markLessonComplete(Lesson $lesson, $user)
+    public function markLessonComplete(Lesson $lesson, $user): ?\App\Models\Certificate
     {
         DB::table('lesson_progress')->updateOrInsert(
             ['user_id' => $user->id, 'lesson_id' => $lesson->id],
             ['is_completed' => true, 'updated_at' => now(), 'created_at' => now()]
         );
+
+        $course = $lesson->course;
+
+        return $course
+            ? $this->certificateService->issueIfCourseCompleted($course, $user)
+            : null;
     }
 
     public function updateLessonProgress($lessonId, $user, $timeWatched)

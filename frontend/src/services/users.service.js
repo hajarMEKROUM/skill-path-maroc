@@ -13,6 +13,11 @@ export const usersService = {
     return response.data;
   },
 
+  createUser: async (payload) => {
+    const response = await api.post('/admin/users', payload);
+    return response.data;
+  },
+
   // Update user role (Spatie implementation in backend)
   updateRole: async (id, role) => {
     const response = await api.put(`/admin/user/${id}/role`, { role });

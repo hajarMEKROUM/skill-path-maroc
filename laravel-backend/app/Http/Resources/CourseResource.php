@@ -21,6 +21,7 @@ class CourseResource extends JsonResource
             'instructor_id' => $this->instructor_id,
             'instructor' => new UserResource($this->whenLoaded('instructor')),
             'lessons' => $this->whenLoaded('lessons'),
+            'modules' => $this->whenLoaded('modules'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

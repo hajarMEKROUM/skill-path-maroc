@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\RoleNormalizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -80,6 +81,8 @@ class User extends Authenticatable
 
     public function getRoleAttribute()
     {
-        return $this->roles->first()?->name ?? $this->attributes['role'] ?? 'student';
+        $raw = $this->roles->first()?->name ?? $this->attributes['role'] ?? 'user';
+
+        return RoleNormalizer::normalize($raw);
     }
 }

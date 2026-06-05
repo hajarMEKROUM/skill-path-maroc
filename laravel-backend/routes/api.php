@@ -10,6 +10,7 @@ use App\Http\Controllers\API\AdminController;
 use App\Http\Controllers\API\CertificationController;
 use App\Http\Controllers\API\ForumController;
 use App\Http\Controllers\API\RecommendationController;
+use App\Http\Controllers\API\ChatController;
 
 Route::prefix('v1')->group(function () {
 
@@ -36,6 +37,18 @@ Route::prefix('v1')->group(function () {
         Route::delete('/courses/{course}', [CourseController::class, 'destroy']);
         Route::post('/courses/{course}/enroll', [CourseController::class, 'enroll']);
         Route::get('/my-courses', [CourseController::class, 'myCourses']);
+        Route::get('/courses/{course}/lessons', [CourseController::class, 'lessons']);
+        Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'lesson']);
+        Route::post('/courses/{course}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson']);
+        Route::post('/lesson-progress', [CourseController::class, 'updateProgress']);
+
+        // Messagerie
+        Route::prefix('chat')->group(function () {
+            Route::get('/conversations', [ChatController::class, 'index']);
+            Route::post('/conversations', [ChatController::class, 'startConversation']);
+            Route::get('/conversations/{conversation}/messages', [ChatController::class, 'messages']);
+            Route::post('/conversations/{conversation}/messages', [ChatController::class, 'storeMessage']);
+        });
 
         // Test de positionnement + IA
         Route::post('/placement-test/start', [PlacementTestController::class, 'start']);
@@ -69,8 +82,11 @@ Route::prefix('v1')->group(function () {
         Route::middleware('role:admin')->prefix('admin')->group(function () {
             Route::get('/stats', [AdminController::class, 'stats']);
             Route::get('/users', [AdminController::class, 'users']);
+            Route::post('/users', [AdminController::class, 'storeUser']);
             Route::get('/user/{user}', [AdminController::class, 'user']);
             Route::put('/user/{user}/role', [AdminController::class, 'updateRole']);
+            Route::post('/courses', [AdminController::class, 'storeCourse']);
+            Route::post('/jobs', [AdminController::class, 'storeJob']);
             Route::put('/user/{user}/ban', [AdminController::class, 'ban']);
             Route::put('/user/{user}/verify', [AdminController::class, 'verify']);
             Route::get('/jobs/pending', [AdminController::class, 'pendingJobs']);

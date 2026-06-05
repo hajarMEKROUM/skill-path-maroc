@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Support\RoleNormalizer;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -25,15 +26,21 @@ class CheckRole
 
     protected function userHasRole($user, string $role): bool
     {
-        $columnRole = $user->getAttributes()['role'] ?? null;
-        if ($columnRole === $role) {
+        $expected = RoleNormalizer::normalize($role);
+        $columnRole = RoleNormalizer::normalize($user->getAttributes()['role'] ?? null);
+
+        if ($columnRole === $expected) {
             return true;
         }
 
-        if (method_exists($user, 'hasRole') && $user->hasRole($role)) {
-            return true;
+        if (method_exists($user, 'hasRole')) {
+            foreach ($user->roles as $assigned) {
+                if (RoleNormalizer::normalize($assigned->name) === $expected) {
+                    return true;
+                }
+            }
         }
 
-        return $user->role === $role;
+        return RoleNormalizer::normalize($user->role) === $expected;
     }
 }

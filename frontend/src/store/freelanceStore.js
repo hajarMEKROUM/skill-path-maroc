@@ -119,7 +119,8 @@ const useFreelanceStore = create((set, get) => ({
     set({ messages: [...messages, optimisticMessage], isSendingMessage: true });
 
     try {
-      const confirmedMsg = await freelanceService.sendMessage(activeConversationId, msgData);
+      const response = await freelanceService.sendMessage(activeConversationId, msgData);
+      const confirmedMsg = response.data ?? response;
       set((state) => ({
         messages: state.messages.map((m) => (m.id === tempId ? confirmedMsg : m)),
         isSendingMessage: false,

@@ -4,6 +4,7 @@ namespace App\Policies;
 
 use App\Models\Course;
 use App\Models\User;
+use App\Support\RoleNormalizer;
 use Illuminate\Auth\Access\Response;
 
 class CoursePolicy
@@ -20,19 +21,21 @@ class CoursePolicy
 
     public function create(User $user): bool
     {
-        return $user->can('manage courses') || $user->role === 'instructor';
+        return RoleNormalizer::isAdmin($user->role)
+            || $user->can('manage courses')
+            || $user->can('create courses');
     }
 
     public function update(User $user, Course $course): bool
     {
-        return $user->role === 'admin'
+        return RoleNormalizer::isAdmin($user->role)
             || $user->can('manage courses')
             || $user->id === $course->instructor_id;
     }
 
     public function delete(User $user, Course $course): bool
     {
-        return $user->role === 'admin'
+        return RoleNormalizer::isAdmin($user->role)
             || $user->can('manage courses')
             || $user->id === $course->instructor_id;
     }

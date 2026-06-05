@@ -1,48 +1,33 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, BookOpen, Award, MessageSquare, Settings, 
-  Users, DollarSign, Briefcase, FileText, FileSignature, 
-  BarChart, LogOut, ChevronLeft, ChevronRight 
+import {
+  LayoutDashboard, BookOpen, Award, MessageSquare, Settings,
+  Users, Briefcase, BarChart, LogOut, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { motion } from 'framer-motion';
+import { normalizeRole, ROLES } from '../../utils/roles';
 
 const getNavItems = (role) => {
-  switch (role) {
-    case 'student':
+  const normalized = normalizeRole(role);
+
+  switch (normalized) {
+    case ROLES.USER:
       return [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard/student' },
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard/user' },
         { name: 'My Courses', icon: BookOpen, path: '/dashboard/courses' },
         { name: 'Certificates', icon: Award, path: '/dashboard/certificates' },
         { name: 'Messages', icon: MessageSquare, path: '/dashboard/messages' },
         { name: 'Settings', icon: Settings, path: '/dashboard/settings' },
       ];
-    case 'instructor':
+    case ROLES.ENTREPRISE:
       return [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-        { name: 'My Courses', icon: BookOpen, path: '/dashboard/courses' },
-        { name: 'Students', icon: Users, path: '/dashboard/students' },
-        { name: 'Revenue', icon: DollarSign, path: '/dashboard/revenue' },
-        { name: 'Messages', icon: MessageSquare, path: '/dashboard/messages' },
-      ];
-    case 'freelancer':
-      return [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-        { name: 'Jobs', icon: Briefcase, path: '/dashboard/jobs' },
-        { name: 'Proposals', icon: FileText, path: '/dashboard/proposals' },
-        { name: 'Contracts', icon: FileSignature, path: '/dashboard/contracts' },
-        { name: 'Messages', icon: MessageSquare, path: '/dashboard/messages' },
-      ];
-    case 'enterprise':
-      return [
-        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-        { name: 'Talent Pool', icon: Users, path: '/dashboard/talent' },
-        { name: 'Contracts', icon: FileSignature, path: '/dashboard/contracts' },
+        { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard/enterprise' },
+        { name: 'Jobs', icon: Briefcase, path: '/jobs' },
         { name: 'Messages', icon: MessageSquare, path: '/dashboard/messages' },
         { name: 'Settings', icon: Settings, path: '/dashboard/settings' },
       ];
-    case 'admin':
+    case ROLES.ADMIN:
       return [
         { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard/admin', end: false },
         { name: 'Utilisateurs', icon: Users, path: '/dashboard/users' },
@@ -58,7 +43,7 @@ const getNavItems = (role) => {
 const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  const navItems = getNavItems(user?.role || 'student');
+  const navItems = getNavItems(user?.role);
 
   const handleLogout = () => {
     logout();
@@ -95,41 +80,28 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             <NavLink
               key={item.name}
               to={item.path}
-              end={item.end !== false && (item.path === '/dashboard' || item.path === '/dashboard/admin')}
+              end={item.end !== false && (item.path === '/dashboard/user' || item.path === '/dashboard/admin')}
               className={({ isActive }) =>
                 `flex items-center px-3 py-2.5 rounded-lg transition-colors group relative ${
                   isActive
-                    ? 'bg-primary-50 text-primary-600 font-medium'
+                    ? 'bg-primary-50 text-primary-700 font-medium'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`
               }
             >
-              <item.icon className={`h-5 w-5 shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
-              {!isCollapsed && <span className="truncate">{item.name}</span>}
+              <item.icon className={`w-5 h-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
+              {!isCollapsed && <span>{item.name}</span>}
             </NavLink>
           ))}
         </nav>
       </div>
 
       <div className="p-4 border-t border-gray-200">
-        <div className={`flex items-center ${isCollapsed ? 'justify-center' : ''} mb-4`}>
-          <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold shrink-0">
-            {user?.name?.charAt(0).toUpperCase() || 'U'}
-          </div>
-          {!isCollapsed && (
-            <div className="ml-3 truncate">
-              <p className="text-sm font-medium text-gray-900 truncate">{user?.name || 'User'}</p>
-              <p className="text-xs text-gray-500 capitalize truncate">{user?.role || 'Student'}</p>
-            </div>
-          )}
-        </div>
         <button
           onClick={handleLogout}
-          className={`flex items-center w-full px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors ${
-            isCollapsed ? 'justify-center' : ''
-          }`}
+          className="flex items-center w-full px-3 py-2.5 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
         >
-          <LogOut className={`h-5 w-5 ${isCollapsed ? '' : 'mr-3'}`} />
+          <LogOut className={`w-5 h-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
           {!isCollapsed && <span>Logout</span>}
         </button>
       </div>
