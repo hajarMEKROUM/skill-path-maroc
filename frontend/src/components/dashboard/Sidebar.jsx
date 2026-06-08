@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Award, MessageSquare, Settings,
-  Users, Briefcase, BarChart, LogOut, ChevronLeft, ChevronRight,
+  Users, Briefcase, BarChart, LogOut, ChevronLeft, ChevronRight, Home, User
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { motion } from 'framer-motion';
@@ -93,6 +93,45 @@ const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
               {!isCollapsed && <span>{item.name}</span>}
             </NavLink>
           ))}
+          <NavLink
+            to="/"
+            className={({ isActive }) =>
+              `flex items-center px-3 py-2.5 rounded-lg transition-colors group relative anti-gravity-btn-1 ${
+                isActive
+                  ? 'bg-primary-50 text-primary-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`
+            }
+          >
+            <Home className={`w-5 h-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
+            {!isCollapsed && <span>Accueil</span>}
+          </NavLink>
+          <NavLink
+            to="/dashboard/jobs"
+            className={({ isActive }) =>
+              `flex items-center px-3 py-2.5 rounded-lg transition-colors group relative anti-gravity-btn-2 ${
+                isActive
+                  ? 'bg-primary-50 text-primary-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`
+            }
+          >
+            <Briefcase className={`w-5 h-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
+            {!isCollapsed && <span>Freelance</span>}
+          </NavLink>
+          <NavLink
+            to="/dashboard/profile"
+            className={({ isActive }) =>
+              `flex items-center px-3 py-2.5 rounded-lg transition-colors group relative anti-gravity-btn-3 ${
+                isActive
+                  ? 'bg-primary-50 text-primary-700 font-medium'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`
+            }
+          >
+            <User className={`w-5 h-5 flex-shrink-0 ${isCollapsed ? 'mx-auto' : 'mr-3'}`} />
+            {!isCollapsed && <span>Profil</span>}
+          </NavLink>
         </nav>
       </div>
 

@@ -50,8 +50,11 @@ const RevenueChart = () => {
       return <div style={emptyChartStyle}>Aucune donnée disponible</div>;
     }
 
+    const data = safeData;
+    if (!data || data.length === 0) return null;
+
     return (
-      <div style={{ width: '100%', height: 300 }}>
+      <div style={{ width: '100%', minHeight: 300 }}>
         {isMounted ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart

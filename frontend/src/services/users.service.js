@@ -9,11 +9,12 @@ export const usersService = {
 
   // Get single user details
   getUserDetails: async (id) => {
-    const response = await api.get(`/admin/users/${id}`);
+    const response = await api.get(`/admin/user/${id}`);
     return response.data;
   },
 
   createUser: async (payload) => {
+    console.log('payload', payload);
     const response = await api.post('/admin/users', payload);
     return response.data;
   },
@@ -38,7 +39,7 @@ export const usersService = {
 
   // Delete user (soft delete)
   deleteUser: async (id) => {
-    const response = await api.delete(`/admin/users/${id}`);
+    const response = await api.delete(`/admin/user/${id}`);
     return response.data;
   }
 };

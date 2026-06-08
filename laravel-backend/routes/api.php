@@ -11,6 +11,7 @@ use App\Http\Controllers\API\CertificationController;
 use App\Http\Controllers\API\ForumController;
 use App\Http\Controllers\API\RecommendationController;
 use App\Http\Controllers\API\ChatController;
+use App\Http\Controllers\API\AdminCourseController;
 
 Route::prefix('v1')->group(function () {
 
@@ -85,7 +86,7 @@ Route::prefix('v1')->group(function () {
             Route::post('/users', [AdminController::class, 'storeUser']);
             Route::get('/user/{user}', [AdminController::class, 'user']);
             Route::put('/user/{user}/role', [AdminController::class, 'updateRole']);
-            Route::post('/courses', [AdminController::class, 'storeCourse']);
+            Route::apiResource('courses', AdminCourseController::class);
             Route::post('/jobs', [AdminController::class, 'storeJob']);
             Route::put('/user/{user}/ban', [AdminController::class, 'ban']);
             Route::put('/user/{user}/verify', [AdminController::class, 'verify']);

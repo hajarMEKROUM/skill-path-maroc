@@ -22,11 +22,24 @@ export const getCsrf = () => {
   });
 };
 
+// Request interceptor — attaches Bearer token if one is stored (token-auth fallback)
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor — handles 401 gracefully
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const url = error.config?.url ?? "";
-    const isAuthCheck = url.endsWith("/me");
+    const is401 = error.response?.status === 401;
+    // /me is checked on every page load — a 401 here just means "not logged in", not an error
+    const isMeCheck = url.endsWith("/me");
+    const wasAuthenticated = localStorage.getItem("authed") === "1";
     const isPublicPage = [
       "/login",
       "/register",
@@ -35,11 +48,18 @@ api.interceptors.response.use(
       "/community",
       "/",
     ].includes(window.location.pathname);
-    if (error.response?.status === 401 && !isAuthCheck && !isPublicPage) {
-      window.location.href = "/login";
+
+    if (is401) {
+      localStorage.removeItem("token");
+      // Only redirect if user was previously authenticated and this is NOT the initial auth check
+      if (wasAuthenticated && !isMeCheck && !isPublicPage) {
+        localStorage.removeItem("authed");
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }
 );
 
 export default api;
+

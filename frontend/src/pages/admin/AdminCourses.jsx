@@ -20,7 +20,7 @@ const AdminCourses = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/courses', { params: { admin: 1, per_page: 50 } });
+      const response = await api.get('/admin/courses', { params: { per_page: 50 } });
       const raw = response.data.data ?? response.data;
       const list = Array.isArray(raw) ? raw : [];
       setCourses(list);
@@ -56,7 +56,7 @@ const AdminCourses = () => {
     const nextStatus = course.status === 'published' ? 'draft' : 'published';
     setActionLoading(course.id);
     try {
-      await api.put(`/courses/${course.id}`, { status: nextStatus });
+      await api.put(`/admin/courses/${course.id}`, { status: nextStatus });
       await fetchCourses();
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de la mise à jour du statut.');
@@ -69,7 +69,7 @@ const AdminCourses = () => {
     if (!window.confirm('Supprimer ce cours ?')) return;
     setActionLoading(courseId);
     try {
-      await api.delete(`/courses/${courseId}`);
+      await api.delete(`/admin/courses/${courseId}`);
       await fetchCourses();
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de la suppression.');

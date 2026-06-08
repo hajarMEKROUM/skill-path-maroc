@@ -74,6 +74,7 @@ const AdminUsers = () => {
     e.preventDefault();
     setActionLoading('create');
     setError(null);
+    console.log('Sending payload:', createForm);
     try {
       await usersService.createUser(createForm);
       setShowCreate(false);

@@ -34,20 +34,38 @@ class AdminController extends Controller
 
     public function users(Request $request)
     {
-        $query = User::query()->with('roles');
+        try {
+            $currentUser = auth('sanctum')->user();
+            if (!$currentUser) {
+                return response()->json(['message' => 'Unauthenticated'], 401);
+            }
 
-        if ($request->filled('search')) {
-            $query->where(function ($builder) use ($request) {
-                $builder->where('name', 'like', '%'.$request->search.'%')
-                    ->orWhere('email', 'like', '%'.$request->search.'%');
-            });
+            $query = User::query()->with('roles');
+
+            if ($request->filled('search')) {
+                $query->where(function ($builder) use ($request) {
+                    $builder->where('name', 'like', '%'.$request->search.'%')
+                        ->orWhere('email', 'like', '%'.$request->search.'%');
+                });
+            }
+
+            if ($request->filled('role')) {
+                $query->where('role', RoleNormalizer::normalize($request->role));
+            }
+
+            try {
+                $users = $query->latest()->paginate($request->integer('per_page', 15));
+            } catch (\Exception $e) {
+                $users = $query->latest()->get();
+            }
+
+            return response()->json($users);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        if ($request->filled('role')) {
-            $query->where('role', RoleNormalizer::normalize($request->role));
-        }
-
-        return response()->json($query->latest()->paginate($request->integer('per_page', 15)));
     }
 
     public function user(User $user)

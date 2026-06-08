@@ -27,3 +27,11 @@
     @apply bg-surface border border-slate-800 rounded-xl shadow-lg backdrop-blur-md;
   }
 }
+
+@keyframes anti-gravity {
+  from { transform: translateY(0px); }
+  to   { transform: translateY(-6px); }
+}
+.anti-gravity-btn-1 { animation: anti-gravity 3s ease-in-out infinite alternate; }
+.anti-gravity-btn-2 { animation: anti-gravity 4.5s ease-in-out infinite alternate; }
+.anti-gravity-btn-3 { animation: anti-gravity 6s ease-in-out infinite alternate; }

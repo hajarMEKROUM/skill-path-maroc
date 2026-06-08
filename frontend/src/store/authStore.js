@@ -22,6 +22,11 @@ const useAuthStore = create((set) => ({
       const response = await api.post("/login", credentials);
 
       const user = withNormalizedRole(response.data.user);
+      // Mark session as active for response interceptor
+      localStorage.setItem("authed", "1");
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
       set({
         user,
         isAuthenticated: true,
@@ -47,6 +52,10 @@ const useAuthStore = create((set) => ({
       const response = await api.post("/register", userData);
 
       const user = withNormalizedRole(response.data.user);
+      localStorage.setItem("authed", "1");
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
       set({
         user,
         isAuthenticated: true,
@@ -67,6 +76,8 @@ const useAuthStore = create((set) => ({
     try {
       await api.post("/logout");
     } finally {
+      localStorage.removeItem("authed");
+      localStorage.removeItem("token");
       set({
         user: null,
         isAuthenticated: false,
@@ -78,14 +89,21 @@ const useAuthStore = create((set) => ({
     set({ isLoading: true });
 
     try {
+      // Refresh CSRF cookie so session is valid for the request
+      await getCsrf();
+
       const response = await api.get("/me");
 
+      localStorage.setItem("authed", "1");
       set({
         user: withNormalizedRole(response.data.data ?? response.data.user),
         isAuthenticated: true,
         isLoading: false,
       });
     } catch {
+      // 401 is expected when not logged in — clear flags silently
+      localStorage.removeItem("authed");
+      localStorage.removeItem("token");
       set({
         user: null,
         isAuthenticated: false,

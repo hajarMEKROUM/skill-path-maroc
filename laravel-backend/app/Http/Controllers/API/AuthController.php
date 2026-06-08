@@ -35,12 +35,13 @@ class AuthController extends Controller
         ]);
 
         $user->assignRole($roleValue);
-
         Auth::guard('web')->login($user);
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message'      => 'User registered successfully',
-            'user'         => new UserResource($user->load('roles'))
+            'user'         => new UserResource($user->load('roles')),
+            'token'        => $token
         ], 201);
     }
 
@@ -57,10 +58,12 @@ class AuthController extends Controller
         $request->session()->regenerate();
 
         $user = Auth::guard('web')->user();
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
             'message' => 'Login successful',
-            'user' => new UserResource($user->load('roles'))
+            'user' => new UserResource($user->load('roles')),
+            'token' => $token
         ]);
     }
 

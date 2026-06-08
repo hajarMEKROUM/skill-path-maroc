@@ -12,6 +12,7 @@ export const adminService = {
   },
 
   createUser: async (payload) => {
+    console.log('payload', payload);
     const response = await api.post('/admin/users', payload);
     return response.data;
   },
