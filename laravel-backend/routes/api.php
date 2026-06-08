@@ -12,6 +12,7 @@ use App\Http\Controllers\API\ForumController;
 use App\Http\Controllers\API\RecommendationController;
 use App\Http\Controllers\API\ChatController;
 use App\Http\Controllers\API\AdminCourseController;
+use App\Http\Controllers\API\DashboardController;
 
 Route::prefix('v1')->group(function () {
 
@@ -30,6 +31,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
         Route::post('/profile/avatar', [AuthController::class, 'uploadAvatar']);
+
+        Route::get('/dashboard', [DashboardController::class, 'index']);
 
         // Cours (actions protégées)
         Route::post('/courses', [CourseController::class, 'store']);

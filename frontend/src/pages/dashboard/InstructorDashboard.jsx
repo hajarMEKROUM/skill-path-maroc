@@ -1,62 +1,119 @@
-import React from 'react';
-import DashboardHeader from '../../components/dashboard/DashboardHeader';
-import StatsCard from '../../components/dashboard/StatsCard';
-import RevenueChart from '../../components/dashboard/charts/RevenueChart';
-import RecentActivity from '../../components/dashboard/RecentActivity';
-import { Users, DollarSign, BookOpen, Star } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { Users, BookOpen, CheckCircle, Layers } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { useDashboard } from '../../hooks/useDashboard';
+import DashboardHeader from '../../components/dashboard/DashboardHeader';
+import DashboardStatsGrid from '../../components/dashboard/DashboardStatsGrid';
+import DashboardError from '../../components/dashboard/DashboardError';
+import DashboardSkeleton from '../../components/dashboard/DashboardSkeleton';
+import RecentActivity from '../../components/dashboard/RecentActivity';
+import EmptyState from '../../components/dashboard/EmptyState';
 
 const InstructorDashboard = () => {
-  const { user } = useAuthStore();
+  const userId = useAuthStore((state) => state.user?.id);
+  const { data, isLoading, error, refetch } = useDashboard(userId);
 
-  const stats = [
-    { title: "Total Students", value: "2,451", icon: Users, trend: "up", trendValue: "12%", colorClass: "bg-blue-100 text-blue-600" },
-    { title: "Total Revenue", value: "$12,450", icon: DollarSign, trend: "up", trendValue: "8%", colorClass: "bg-emerald-100 text-emerald-600" },
-    { title: "Active Courses", value: "8", icon: BookOpen, colorClass: "bg-purple-100 text-purple-600" },
-    { title: "Avg. Rating", value: "4.8", icon: Star, colorClass: "bg-orange-100 text-orange-600" }
-  ];
+  const stats = useMemo(
+    () => [
+      {
+        key: 'students',
+        title: 'Total Students',
+        value: data?.stats?.total_students ?? 0,
+        icon: Users,
+        colorClass: 'bg-blue-100 text-blue-600',
+      },
+      {
+        key: 'courses',
+        title: 'My Courses',
+        value: data?.stats?.total_courses ?? 0,
+        icon: BookOpen,
+        colorClass: 'bg-purple-100 text-purple-600',
+      },
+      {
+        key: 'published',
+        title: 'Published Courses',
+        value: data?.stats?.published_courses ?? 0,
+        icon: CheckCircle,
+        colorClass: 'bg-emerald-100 text-emerald-600',
+      },
+      {
+        key: 'active',
+        title: 'Active Courses',
+        value: data?.stats?.active_courses ?? 0,
+        icon: Layers,
+        colorClass: 'bg-orange-100 text-orange-600',
+      },
+    ],
+    [data]
+  );
 
-  const revenueData = [
-    { name: 'Jan', revenue: 4000 },
-    { name: 'Feb', revenue: 3000 },
-    { name: 'Mar', revenue: 5000 },
-    { name: 'Apr', revenue: 4500 },
-    { name: 'May', revenue: 6000 },
-    { name: 'Jun', revenue: 5500 },
-  ];
-
-  const activities = [
-    { id: 1, title: "New Enrollment", description: "Sarah joined Fullstack MERN", time: "10 mins ago", colorClass: "bg-blue-500" },
-    { id: 2, title: "5 Star Review", description: "Great course, highly recommend!", time: "2 hours ago", colorClass: "bg-orange-500" },
-    { id: 3, title: "Course Updated", description: "Published new lesson on React Hooks", time: "1 day ago", colorClass: "bg-emerald-500" }
-  ];
+  if (isLoading) {
+    return <DashboardSkeleton statCount={4} />;
+  }
 
   return (
     <div className="space-y-6">
-      <DashboardHeader 
-        title="Instructor Dashboard" 
-        subtitle="Manage your courses, students, and track your revenue."
+      <DashboardHeader
+        title="Instructor Dashboard"
+        subtitle="Manage your courses, students, and track your impact."
         action={
-          <button className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors">
-            Create Course
-          </button>
+          <Link
+            to="/dashboard/courses-admin"
+            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            Manage Courses
+          </Link>
         }
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
-          <StatsCard key={index} {...stat} />
-        ))}
-      </div>
+      {error && <DashboardError message={error} onRetry={refetch} />}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <RevenueChart data={revenueData} />
-        </div>
-        <div className="lg:col-span-1">
-          <RecentActivity activities={activities} />
-        </div>
-      </div>
+      {!error && (
+        <>
+          <DashboardStatsGrid stats={stats} columns={4} />
+
+          {(data?.stats?.total_courses ?? 0) === 0 ? (
+            <EmptyState
+              icon={BookOpen}
+              title="No courses yet"
+              description="You have not created any courses. Start by adding your first course to the platform."
+              action={
+                <Link to="/dashboard/courses-admin" className="btn-primary px-4 py-2 text-sm">
+                  Create Course
+                </Link>
+              }
+            />
+          ) : (
+            <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Your Courses</h3>
+              <ul className="space-y-3">
+                {(data?.courses ?? []).map((course) => (
+                  <li
+                    key={course.id}
+                    className="flex items-center justify-between p-3 rounded-xl border border-gray-100"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">{course.title}</p>
+                      <p className="text-xs text-gray-500 capitalize mt-1">
+                        {course.status} · {course.enrollments_count ?? 0} students
+                      </p>
+                    </div>
+                    <Link
+                      to={`/courses/${course.slug || course.id}`}
+                      className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      View
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <RecentActivity activities={data?.recentActivity ?? []} />
+        </>
+      )}
     </div>
   );
 };

@@ -25,7 +25,10 @@ class CourseController extends Controller
 
     public function index(Request $request)
     {
-        $query = Course::query()->with('instructor');
+        $query = Course::query()
+            ->with('instructor')
+            ->withCount('lessons')
+            ->withSum('lessons as duration_seconds', 'duration_seconds');
 
         $isAdminList = $request->user()
             && \App\Support\RoleNormalizer::isAdmin($request->user()->role)
@@ -125,13 +128,32 @@ class CourseController extends Controller
     public function myCourses(Request $request)
     {
         $user = $request->user();
-        $courses = $user->enrollments()
-            ->with('course')
-            ->get()
-            ->pluck('course')
-            ->filter();
 
-        return response()->json(['data' => $courses->values()]);
+        $enrollments = $user->enrollments()
+            ->with([
+                'course' => fn ($query) => $query
+                    ->with('instructor')
+                    ->withCount('lessons')
+                    ->withSum('lessons as duration_seconds', 'duration_seconds'),
+            ])
+            ->latest('enrolled_at')
+            ->get();
+
+        $data = $enrollments
+            ->filter(fn ($enrollment) => $enrollment->course !== null)
+            ->map(function ($enrollment) {
+                $courseData = (new CourseResource($enrollment->course))->resolve();
+
+                return array_merge($courseData, [
+                    'enrollment_id' => $enrollment->id,
+                    'progress' => (int) ($enrollment->progress ?? 0),
+                    'enrolled_at' => $enrollment->enrolled_at,
+                    'completed_at' => $enrollment->completed_at,
+                ]);
+            })
+            ->values();
+
+        return response()->json(['data' => $data]);
     }
 
     public function lessons(Request $request, Course $course)

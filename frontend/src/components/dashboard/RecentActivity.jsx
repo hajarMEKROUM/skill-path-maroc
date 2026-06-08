@@ -30,7 +30,7 @@ const RecentActivity = ({ activities = [] }) => {
         </div>
       ) : (
         <div className="text-center py-8 text-gray-500 text-sm">
-          No recent activity to show.
+          No recent activity to show yet.
         </div>
       )}
     </div>

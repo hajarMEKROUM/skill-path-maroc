@@ -1,20 +1,42 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PlayCircle, CheckCircle, Clock } from 'lucide-react';
+import { PlayCircle, CheckCircle, BookOpen } from 'lucide-react';
+import EmptyState from './EmptyState';
 
-const CourseProgress = ({ courses = [] }) => {
+const CourseProgress = ({ courses = [], isLoading = false }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 h-full animate-pulse">
+        <div className="h-5 bg-gray-200 rounded w-40 mb-6" />
+        <div className="space-y-4">
+          {[1, 2].map((item) => (
+            <div key={item} className="h-16 bg-gray-100 rounded-xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-soft border border-gray-100 p-6 h-full">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-bold text-gray-900">Current Courses</h3>
-        <button className="text-sm font-medium text-primary-600 hover:text-primary-700">View All</button>
+        <h3 className="text-lg font-bold text-gray-900">Active Courses</h3>
+        {courses.length > 0 && (
+          <Link to="/dashboard/courses" className="text-sm font-medium text-primary-600 hover:text-primary-700">
+            View All
+          </Link>
+        )}
       </div>
 
       {courses.length > 0 ? (
         <div className="space-y-4">
           {courses.map((course, index) => (
-            <motion.div 
+            <Link
               key={course.id || index}
+              to={`/dashboard/learn/${course.id}`}
+            >
+            <motion.div 
               whileHover={{ scale: 1.01 }}
               className="flex items-center p-3 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100"
             >
@@ -31,15 +53,14 @@ const CourseProgress = ({ courses = [] }) => {
               <div className="ml-4 flex-1">
                 <h4 className="text-sm font-semibold text-gray-900 line-clamp-1">{course.title}</h4>
                 <div className="flex items-center mt-1 space-x-3 text-xs text-gray-500">
-                  <span className="flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    {course.timeLeft} left
-                  </span>
+                  {course.level && (
+                    <span className="capitalize">{course.level}</span>
+                  )}
                   <span className="flex items-center text-primary-600 font-medium">
-                    {course.progress === 100 ? (
+                    {(course.progress ?? 0) >= 100 || course.completed ? (
                       <><CheckCircle className="w-3 h-3 mr-1" /> Completed</>
                     ) : (
-                      `${course.progress}%`
+                      `${course.progress ?? 0}%`
                     )}
                   </span>
                 </div>
@@ -47,17 +68,25 @@ const CourseProgress = ({ courses = [] }) => {
                 <div className="w-full bg-gray-100 rounded-full h-1.5 mt-2">
                   <div
                     className="bg-primary-500 h-1.5 rounded-full"
-                    style={{ width: `${course.progress}%` }}
+                    style={{ width: `${course.progress ?? 0}%` }}
                   ></div>
                 </div>
               </div>
             </motion.div>
+            </Link>
           ))}
         </div>
       ) : (
-        <div className="text-center py-8 text-gray-500 text-sm">
-          You are not enrolled in any courses yet.
-        </div>
+        <EmptyState
+          icon={BookOpen}
+          title="No active courses"
+          description="You are not enrolled in any courses yet. Browse our catalog to start learning."
+          action={
+            <Link to="/courses" className="btn-primary px-4 py-2 text-sm">
+              Browse Courses
+            </Link>
+          }
+        />
       )}
     </div>
   );

@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Award, Download, Loader2 } from 'lucide-react';
-import api from '../../services/api';
+import { useCertifications } from '../../hooks/useDashboard';
+import { dashboardService } from '../../services/dashboard.service';
+import EmptyState from '../../components/dashboard/EmptyState';
 
 const statusStyles = {
   validated: 'bg-emerald-100 text-emerald-700',
@@ -8,39 +11,17 @@ const statusStyles = {
   refused: 'bg-red-100 text-red-700',
 };
 
-const MyCertifications = () => {
-  const [certifications, setCertifications] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+const MyCertifications = ({ compact = false }) => {
+  const { certifications, isLoading, error } = useCertifications();
   const [downloadingId, setDownloadingId] = useState(null);
-
-  useEffect(() => {
-    const fetchCerts = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const response = await api.get('/certifications');
-        const data = response.data.data ?? response.data;
-        setCertifications(Array.isArray(data) ? data : []);
-      } catch (err) {
-        setError(err.response?.data?.message || 'Impossible de charger les certifications.');
-        setCertifications([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchCerts();
-  }, []);
 
   const handleDownload = async (id) => {
     setDownloadingId(id);
     try {
-      const response = await api.post(
-        `/certifications/${id}/download`,
-        {},
-        { responseType: 'blob' }
-      );
-      const blob = new Blob([response.data], { type: response.headers['content-type'] || 'text/html' });
+      const response = await dashboardService.downloadCertification(id);
+      const blob = new Blob([response.data], {
+        type: response.headers['content-type'] || 'text/html',
+      });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -50,7 +31,7 @@ const MyCertifications = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert(err.response?.data?.message || 'Téléchargement impossible.');
+      alert(err.response?.data?.message || 'Download failed.');
     } finally {
       setDownloadingId(null);
     }
@@ -68,7 +49,7 @@ const MyCertifications = () => {
     <div className="space-y-4">
       <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
         <Award className="text-primary-600" size={22} />
-        Mes certifications
+        {compact ? 'My Certifications' : 'Certifications'}
       </h2>
 
       {error && (
@@ -78,7 +59,16 @@ const MyCertifications = () => {
       )}
 
       {certifications.length === 0 ? (
-        <p className="text-gray-500 text-sm">Aucune certification pour le moment. Terminez un cours pour en obtenir une.</p>
+        <EmptyState
+          icon={Award}
+          title="No certificates yet"
+          description="Start learning to earn your first certificate. Complete a course to unlock your achievement."
+          action={
+            <Link to="/courses" className="btn-primary px-4 py-2 text-sm">
+              Browse Courses
+            </Link>
+          }
+        />
       ) : (
         <ul className="space-y-3">
           {certifications.map((cert) => {
@@ -89,16 +79,22 @@ const MyCertifications = () => {
                 className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-gray-100 rounded-xl p-4"
               >
                 <div>
-                  <p className="font-medium text-gray-900">{cert.course_title || `Cours #${cert.course_id}`}</p>
-                  <p className="text-xs text-gray-500 mt-1">N° {cert.certificate_number}</p>
+                  <p className="font-medium text-gray-900">
+                    {cert.course_title || `Course #${cert.course_id}`}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">No. {cert.certificate_number}</p>
                   {cert.issued_at && (
                     <p className="text-xs text-gray-400 mt-1">
-                      Délivrée le {new Date(cert.issued_at).toLocaleDateString('fr-FR')}
+                      Issued on {new Date(cert.issued_at).toLocaleDateString('en-US')}
                     </p>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${statusStyles[status] || statusStyles.pending}`}>
+                  <span
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${
+                      statusStyles[status] || statusStyles.pending
+                    }`}
+                  >
                     {status}
                   </span>
                   {status === 'validated' && (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
-const StatsCard = ({ title, value, icon: Icon, trend, trendValue, colorClass }) => {
+const StatsCard = ({ title, value, icon: Icon, trend, trendValue, colorClass, subtitle }) => {
   return (
     <motion.div
       whileHover={{ y: -4 }}
@@ -10,7 +10,8 @@ const StatsCard = ({ title, value, icon: Icon, trend, trendValue, colorClass }) 
       <div className="flex justify-between items-start">
         <div>
           <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-          <h3 className="text-2xl font-bold text-gray-900">{value}</h3>
+          <h3 className="text-2xl font-bold text-gray-900">{value ?? '0'}</h3>
+          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
         </div>
         <div className={`p-3 rounded-xl ${colorClass}`}>
           <Icon className="w-6 h-6" />
