@@ -55,6 +55,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/courses/{course}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson']);
         Route::patch('/lessons/{lesson}/complete', [CourseController::class, 'completeLessonByLesson']);
         Route::post('/lesson-progress', [CourseController::class, 'updateProgress']);
+        Route::get('/courses/{course}/certificate', [CourseController::class, 'certificate']);
 
         // Messagerie
         Route::prefix('chat')->group(function () {

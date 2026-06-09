@@ -9,7 +9,11 @@ class Quiz extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['course_id', 'lesson_id', 'title', 'passing_score'];
+    protected $fillable = ['course_id', 'lesson_id', 'title', 'passing_score', 'questions'];
+
+    protected $casts = [
+        'questions' => 'array',
+    ];
 
     public function course()
     {

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\Certificate;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Services\CourseService;
 use App\Http\Requests\Course\StoreCourseRequest;
 use App\Http\Requests\Course\UpdateCourseRequest;
 use App\Http\Resources\CourseResource;
+use App\Http\Resources\LessonResource;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
@@ -152,16 +154,16 @@ class CourseController extends Controller
 
     public function lessons(Request $request, Course $course)
     {
-        $data = $this->courseService->getCourseLessonsWithProgress($course, $request->user());
+        $lessons = $this->courseService->getCourseLessons($course, $request->user());
 
-        return response()->json($data);
+        return response()->json(LessonResource::collection($lessons)->resolve());
     }
 
-    public function lesson(Course $course, Lesson $lesson)
+    public function lesson(Request $request, Course $course, Lesson $lesson)
     {
-        abort_unless($lesson->course_id === $course->id, 404);
+        $lesson = $this->courseService->getLesson($course, $lesson, $request->user());
 
-        return response()->json($lesson->load('quiz.questions'));
+        return new LessonResource($lesson);
     }
 
     public function completeLesson(Request $request, Course $course, Lesson $lesson)
@@ -176,6 +178,20 @@ class CourseController extends Controller
         return $this->completeLessonForUser($request, $lesson);
     }
 
+    public function certificate(Request $request, Course $course)
+    {
+        $certificate = Certificate::where('user_id', $request->user()->id)
+            ->where('course_id', $course->id)
+            ->with('course')
+            ->first();
+
+        if (! $certificate) {
+            return response()->json(['message' => 'Certificat non disponible.'], 404);
+        }
+
+        return response()->json($this->formatCertificate($certificate));
+    }
+
     protected function completeLessonForUser(Request $request, Lesson $lesson)
     {
         abort_unless($lesson->course_id, 404);
@@ -183,10 +199,26 @@ class CourseController extends Controller
         $certificate = $this->courseService->markLessonComplete($lesson, $request->user());
 
         return response()->json([
-            'message' => 'Lesson marked as complete',
-            'certificate' => $certificate,
+            'message' => 'Leçon marquée comme terminée',
+            'certificate' => $this->formatCertificate($certificate),
             'course_completed' => (bool) $certificate,
         ]);
+    }
+
+    protected function formatCertificate(?Certificate $certificate): ?array
+    {
+        if (! $certificate) {
+            return null;
+        }
+
+        $certificate->loadMissing('course');
+
+        return [
+            'id' => $certificate->id,
+            'certificate_number' => $certificate->certificate_number,
+            'course_title' => $certificate->course?->title,
+            'issued_at' => $certificate->issued_at,
+        ];
     }
 
     public function updateProgress(Request $request)

@@ -13,6 +13,8 @@ class CourseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(HtmlCssFundamentalsSeeder::class);
+
         $instructor = User::where('role', 'admin')->first()
             ?? User::where('role', 'user')->first();
 
@@ -21,28 +23,6 @@ class CourseSeeder extends Seeder
         }
 
         $courses = [
-            [
-                'title' => 'Introduction au Développement Web',
-                'description' => 'Apprenez les fondamentaux du HTML, CSS et JavaScript pour créer vos premiers sites web.',
-                'level' => 'beginner',
-                'price' => 0,
-                'modules' => [
-                    [
-                        'title' => 'Les bases du HTML',
-                        'lessons' => [
-                            ['title' => 'Qu\'est-ce que le HTML ?', 'content_type' => 'text', 'content' => 'Le HTML est le langage de balisage standard pour créer des pages web.'],
-                            ['title' => 'Structure d\'une page HTML', 'content_type' => 'video', 'video_url' => 'https://www.youtube.com/embed/qz0aGYrrlhU'],
-                        ],
-                    ],
-                    [
-                        'title' => 'CSS et mise en forme',
-                        'lessons' => [
-                            ['title' => 'Introduction au CSS', 'content_type' => 'text', 'content' => 'Le CSS permet de styliser vos pages HTML.'],
-                            ['title' => 'Flexbox et Grid', 'content_type' => 'video', 'video_url' => 'https://www.youtube.com/embed/JJSoEo8JSnc'],
-                        ],
-                    ],
-                ],
-            ],
             [
                 'title' => 'React.js — Applications Modernes',
                 'description' => 'Maîtrisez React pour construire des interfaces utilisateur performantes et réactives.',
@@ -54,28 +34,6 @@ class CourseSeeder extends Seeder
                         'lessons' => [
                             ['title' => 'Composants et JSX', 'content_type' => 'text', 'content' => 'React utilise des composants réutilisables pour construire des interfaces.'],
                             ['title' => 'Hooks : useState et useEffect', 'content_type' => 'video', 'video_url' => 'https://www.youtube.com/embed/O6P86uwfdR0'],
-                        ],
-                    ],
-                    [
-                        'title' => 'Gestion d\'état',
-                        'lessons' => [
-                            ['title' => 'Context API', 'content_type' => 'text', 'content' => 'Le Context API permet de partager l\'état entre composants.'],
-                            ['title' => 'React Router', 'content_type' => 'video', 'video_url' => 'https://www.youtube.com/embed/Law7wfdg_ls'],
-                        ],
-                    ],
-                ],
-            ],
-            [
-                'title' => 'Laravel — Backend PHP',
-                'description' => 'Développez des APIs robustes avec Laravel, le framework PHP le plus populaire au Maroc.',
-                'level' => 'intermediate',
-                'price' => 399,
-                'modules' => [
-                    [
-                        'title' => 'Installation et configuration',
-                        'lessons' => [
-                            ['title' => 'Installer Laravel', 'content_type' => 'text', 'content' => 'Guide d\'installation de Laravel avec Composer.'],
-                            ['title' => 'Routes et contrôleurs', 'content_type' => 'video', 'video_url' => 'https://www.youtube.com/embed/MFh0Fd7BsjE'],
                         ],
                     ],
                 ],
@@ -119,6 +77,7 @@ class CourseSeeder extends Seeder
                             'slug' => Str::slug($lessonData['title']),
                             'sort_order' => $lessonIndex + 1,
                             'duration_seconds' => 600,
+                            'video_url' => $lessonData['video_url'] ?? null,
                         ]
                     );
                 }

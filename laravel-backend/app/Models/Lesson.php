@@ -36,6 +36,11 @@ class Lesson extends Model
         return $this->belongsTo(CourseModule::class, 'module_id');
     }
 
+    public function exercises()
+    {
+        return $this->hasMany(Exercise::class)->orderBy('sort_order');
+    }
+
     public function quiz()
     {
         return $this->hasOne(Quiz::class);

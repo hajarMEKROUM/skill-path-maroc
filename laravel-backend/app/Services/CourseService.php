@@ -64,7 +64,7 @@ class CourseService
             ->paginate(15);
     }
 
-    public function getCourseLessonsWithProgress(Course $course, $user)
+    public function getCourseLessons(Course $course, $user)
     {
         $completed = $user
             ? DB::table('lesson_progress')
@@ -74,18 +74,35 @@ class CourseService
                 ->all()
             : [];
 
-        $modules = $course->modules()
-            ->with(['lessons' => fn ($q) => $q->orderBy('sort_order')])
-            ->orderBy('sort_order')
-            ->get();
+        return $course->lessons()
+            ->with(['exercises', 'quiz', 'module'])
+            ->get()
+            ->sortBy(fn ($lesson) => [
+                $lesson->module?->sort_order ?? 0,
+                $lesson->sort_order,
+            ])
+            ->values()
+            ->each(function ($lesson) use ($completed) {
+                $lesson->setAttribute('is_completed', in_array($lesson->id, $completed, true));
+            });
+    }
 
-        $lessons = $course->lessons()->orderBy('sort_order')->get();
+    public function getLesson(Course $course, Lesson $lesson, $user)
+    {
+        abort_unless($lesson->course_id === $course->id, 404);
 
-        return [
-            'modules' => $modules,
-            'lessons' => $lessons,
-            'completed_ids' => $completed,
-        ];
+        $isCompleted = $user
+            ? DB::table('lesson_progress')
+                ->where('user_id', $user->id)
+                ->where('lesson_id', $lesson->id)
+                ->where('is_completed', true)
+                ->exists()
+            : false;
+
+        $lesson->load(['exercises', 'quiz', 'module']);
+        $lesson->setAttribute('is_completed', $isCompleted);
+
+        return $lesson;
     }
 
     public function markLessonComplete(Lesson $lesson, $user): ?\App\Models\Certificate
