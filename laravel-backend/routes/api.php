@@ -12,6 +12,10 @@ use App\Http\Controllers\API\ForumController;
 use App\Http\Controllers\API\RecommendationController;
 use App\Http\Controllers\API\ChatController;
 use App\Http\Controllers\API\AdminCourseController;
+use App\Http\Controllers\API\DashboardController;
+use App\Http\Controllers\API\EmploymentJobController;
+use App\Http\Controllers\API\FreelanceController;
+use App\Http\Controllers\MarketplaceController;
 
 Route::prefix('v1')->group(function () {
 
@@ -27,9 +31,17 @@ Route::prefix('v1')->group(function () {
 
         // Auth
         Route::get('/me', [AuthController::class, 'me']);
+        Route::get('/user', [AuthController::class, 'me']); // Alias for compatibility
         Route::post('/logout', [AuthController::class, 'logout']);
+        Route::put('/user/profile', [AuthController::class, 'updateProfile']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
+        Route::put('/user/password', [AuthController::class, 'updatePassword']);
         Route::post('/profile/avatar', [AuthController::class, 'uploadAvatar']);
+        Route::delete('/user', [AuthController::class, 'destroyAccount']);
+        Route::get('/users', [ChatController::class, 'searchUsers']);
+
+        // Dashboard
+        Route::get('/dashboard', [DashboardController::class, 'index']);
 
         // Cours (actions protégées)
         Route::post('/courses', [CourseController::class, 'store']);
@@ -41,6 +53,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/courses/{course}/lessons', [CourseController::class, 'lessons']);
         Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'lesson']);
         Route::post('/courses/{course}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson']);
+        Route::patch('/lessons/{lesson}/complete', [CourseController::class, 'completeLessonByLesson']);
         Route::post('/lesson-progress', [CourseController::class, 'updateProgress']);
 
         // Messagerie
@@ -63,19 +76,29 @@ Route::prefix('v1')->group(function () {
 
         // Espace Freelance
         Route::apiResource('jobs', JobController::class)->except(['index']);
+        Route::post('/proposals', [FreelanceProposalController::class, 'storeFromRequest']);
         Route::post('/jobs/{job}/apply', [FreelanceProposalController::class, 'store']);
         Route::get('/my-proposals', [FreelanceProposalController::class, 'myProposals']);
+        Route::apiResource('marketplace', MarketplaceController::class);
 
         // Routes legacy (tests + frontend freelance.service)
         Route::prefix('freelance')->group(function () {
             Route::get('/missions', [JobController::class, 'index']);
             Route::post('/missions/{job}/proposals', [FreelanceProposalController::class, 'store']);
+            Route::get('/users', [ChatController::class, 'searchUsers']);
         });
+
+        // Offres d'emploi
+        Route::get('/employment', [EmploymentJobController::class, 'index']);
+        Route::post('/employment', [EmploymentJobController::class, 'store']);
+        Route::get('/employment-jobs', [EmploymentJobController::class, 'index']);
+        Route::post('/employment-jobs', [EmploymentJobController::class, 'store']);
 
         // Forum communautaire
         Route::get('/forum/topics', [ForumController::class, 'index']);
         Route::post('/forum/topics', [ForumController::class, 'store']);
         Route::get('/forum/topics/{topic}', [ForumController::class, 'show']);
+        Route::put('/forum/topics/{topic}', [ForumController::class, 'update']);
         Route::post('/forum/topics/{topic}/comments', [ForumController::class, 'addComment']);
         Route::delete('/forum/topics/{topic}', [ForumController::class, 'destroy']);
 
@@ -85,6 +108,9 @@ Route::prefix('v1')->group(function () {
             Route::get('/users', [AdminController::class, 'users']);
             Route::post('/users', [AdminController::class, 'storeUser']);
             Route::get('/user/{user}', [AdminController::class, 'user']);
+            Route::put('/user/{user}', [AdminController::class, 'updateUser']);
+            Route::patch('/user/{user}', [AdminController::class, 'updateUser']);
+            Route::delete('/user/{user}', [AdminController::class, 'destroyUser']);
             Route::put('/user/{user}/role', [AdminController::class, 'updateRole']);
             Route::apiResource('courses', AdminCourseController::class);
             Route::post('/jobs', [AdminController::class, 'storeJob']);
@@ -93,8 +119,10 @@ Route::prefix('v1')->group(function () {
             Route::get('/jobs/pending', [AdminController::class, 'pendingJobs']);
             Route::put('/jobs/{job}/approve', [AdminController::class, 'approveJob']);
             Route::put('/jobs/{job}/reject', [AdminController::class, 'rejectJob']);
+            Route::get('/freelance', [FreelanceController::class, 'index']);
             Route::get('/certifications', [AdminController::class, 'certifications']);
             Route::put('/certifications/{id}/approve', [AdminController::class, 'approveCertification']);
+            Route::put('/forum/topics/{topic}', [ForumController::class, 'update']);
         });
     });
 });

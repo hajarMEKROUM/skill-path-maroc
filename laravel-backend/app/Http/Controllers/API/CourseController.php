@@ -125,13 +125,29 @@ class CourseController extends Controller
     public function myCourses(Request $request)
     {
         $user = $request->user();
-        $courses = $user->enrollments()
-            ->with('course')
-            ->get()
-            ->pluck('course')
-            ->filter();
+        $enrollments = $user->enrollments()
+            ->with(['course.instructor', 'course.lessons'])
+            ->get();
 
-        return response()->json(['data' => $courses->values()]);
+        $courses = $enrollments->map(function ($enrollment) {
+            $course = $enrollment->course;
+            if (! $course) {
+                return null;
+            }
+
+            return [
+                ...$course->toArray(),
+                'progress' => $enrollment->progress ?? 0,
+                'enrollment' => [
+                    'progress' => $enrollment->progress ?? 0,
+                    'enrolled_at' => $enrollment->enrolled_at,
+                    'completed_at' => $enrollment->completed_at,
+                ],
+                'lessons_count' => $course->lessons?->count() ?? 0,
+            ];
+        })->filter()->values();
+
+        return response()->json(['data' => $courses]);
     }
 
     public function lessons(Request $request, Course $course)
@@ -151,6 +167,18 @@ class CourseController extends Controller
     public function completeLesson(Request $request, Course $course, Lesson $lesson)
     {
         abort_unless($lesson->course_id === $course->id, 404);
+
+        return $this->completeLessonForUser($request, $lesson);
+    }
+
+    public function completeLessonByLesson(Request $request, Lesson $lesson)
+    {
+        return $this->completeLessonForUser($request, $lesson);
+    }
+
+    protected function completeLessonForUser(Request $request, Lesson $lesson)
+    {
+        abort_unless($lesson->course_id, 404);
 
         $certificate = $this->courseService->markLessonComplete($lesson, $request->user());
 

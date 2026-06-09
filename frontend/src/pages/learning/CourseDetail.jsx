@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Loader2, User } from 'lucide-react';
 import api from '../../services/api';
@@ -56,7 +56,7 @@ const CourseDetail = () => {
     setEnrollMessage(null);
     try {
       await enrollInCourse(id);
-      setEnrollMessage('Inscription confirmée !');
+      navigate('/dashboard/courses');
     } catch (err) {
       setEnrollMessage(
         err.response?.data?.message || "Erreur lors de l'inscription."
@@ -201,7 +201,7 @@ const CourseDetail = () => {
             {isAuthenticated && (
               <button
                 type="button"
-                onClick={() => navigate(`/dashboard/learn/${course.id}`)}
+                onClick={() => navigate(`/dashboard/learning/${course.id}`)}
                 className="py-3 px-8 text-base border border-primary-600 text-primary-600 rounded-lg hover:bg-primary-50"
               >
                 Accéder au parcours

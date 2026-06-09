@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Loader2, Send } from 'lucide-react';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Loader2, Send, UserPlus, MessageSquare } from 'lucide-react';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 
 const TopicDetail = () => {
   const { id } = useParams();
-  const { isAuthenticated } = useAuthStore();
+  const navigate = useNavigate();
+  const { isAuthenticated, user } = useAuthStore();
   const [topic, setTopic] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [commentBody, setCommentBody] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
 
   const fetchTopic = async () => {
     setIsLoading(true);
@@ -34,6 +37,27 @@ const TopicDetail = () => {
       setError('Connectez-vous pour voir ce sujet.');
     }
   }, [id, isAuthenticated]);
+
+  const handleConnect = () => {
+    setConnected(true);
+  };
+
+  const handleSendMessage = async () => {
+    const authorId = topic?.author?.id;
+    if (!authorId || authorId === user?.id) return;
+    setActionLoading('message');
+    try {
+      await api.post('/chat/conversations', {
+        recipient_id: authorId,
+        content: `Bonjour, je souhaite échanger à propos de votre sujet : "${topic.title}"`,
+      });
+      navigate('/dashboard/messages');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Impossible de démarrer la conversation.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const handleComment = async (e) => {
     e.preventDefault();
@@ -84,6 +108,28 @@ const TopicDetail = () => {
           {topic.created_at && ` · ${new Date(topic.created_at).toLocaleString('fr-FR')}`}
         </p>
         <div className="mt-6 text-gray-700 whitespace-pre-wrap">{topic.body}</div>
+        {isAuthenticated && topic.author?.id && topic.author.id !== user?.id && (
+          <div className="flex flex-wrap gap-3 mt-6 pt-6 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={handleConnect}
+              disabled={connected}
+              className="btn-secondary flex items-center gap-2 py-2 px-4 text-sm disabled:opacity-60"
+            >
+              <UserPlus size={16} />
+              {connected ? 'Connecté' : 'Se connecter'}
+            </button>
+            <button
+              type="button"
+              onClick={handleSendMessage}
+              disabled={actionLoading === 'message'}
+              className="btn-primary flex items-center gap-2 py-2 px-4 text-sm disabled:opacity-50"
+            >
+              <MessageSquare size={16} />
+              {actionLoading === 'message' ? 'Ouverture...' : 'Envoyer un message'}
+            </button>
+          </div>
+        )}
       </article>
 
       <section className="mb-8">

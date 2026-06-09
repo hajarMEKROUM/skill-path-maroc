@@ -1,16 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Search, Filter, ShieldAlert, Download } from 'lucide-react';
 import useUsersStore from '../../store/usersStore';
 import UsersTable from '../../components/admin/UsersTable';
 import UserDetailsModal from '../../components/admin/UserDetailsModal';
+import CreateUserModal from '../../components/admin/CreateUserModal';
 
 const UsersManagement = () => {
   const { users, isLoading, fetchUsers, filters, setFilters, openModal } = useUsersStore();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   useEffect(() => {
     fetchUsers();
-    // In a real scenario, this would trigger an API call to the Laravel backend.
-    // For demo purposes, we will assume fetchUsers populates the store with mocked or real data.
   }, [fetchUsers]);
 
   const handleSearch = (e) => {
@@ -36,13 +36,12 @@ const UsersManagement = () => {
           <p className="text-sm text-gray-500 mt-1">Manage platform members, roles, and moderation statuses.</p>
         </div>
         <div className="flex items-center space-x-3">
-          <button className="flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 font-medium text-sm transition-colors">
+          <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg shadow-sm hover:bg-purple-700 font-medium text-sm transition-colors">
+            Ajouter un utilisateur
+          </button>
+          <button className="flex items-center px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 font-medium text-sm transition-colors hidden sm:flex">
             <Download size={16} className="mr-2" />
             Export CSV
-          </button>
-          <button className="flex items-center px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg shadow-sm hover:bg-red-100 font-medium text-sm transition-colors">
-            <ShieldAlert size={16} className="mr-2" />
-            Banned List
           </button>
         </div>
       </div>
@@ -92,6 +91,7 @@ const UsersManagement = () => {
 
       {/* Render Modals outside the layout flow */}
       <UserDetailsModal />
+      <CreateUserModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onSuccess={fetchUsers} />
 
     </div>
   );

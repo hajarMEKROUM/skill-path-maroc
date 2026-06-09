@@ -1,25 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Pencil, Trash2, Plus, X } from 'lucide-react';
 import { usersService } from '../../services/users.service';
-import useAuthStore from '../../store/authStore';
-import { isAdmin } from '../../utils/roles';
 
 const ROLES = ['user', 'entreprise', 'admin'];
 
+const emptyForm = {
+  name: '',
+  email: '',
+  password: '',
+  role: 'user',
+};
+
 const AdminUsers = () => {
-  const { user: currentUser } = useAuthStore();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ lastPage: 1, total: 0 });
   const [actionLoading, setActionLoading] = useState(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'user',
-  });
+  const [showForm, setShowForm] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [form, setForm] = useState(emptyForm);
 
   const fetchUsers = async (pageNum = 1) => {
     setLoading(true);
@@ -45,59 +46,71 @@ const AdminUsers = () => {
     fetchUsers(page);
   }, [page]);
 
-  const handleRoleChange = async (userId, role) => {
-    setActionLoading(userId);
-    try {
-      await usersService.updateRole(userId, role);
-      await fetchUsers(page);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors du changement de rôle.');
-    } finally {
-      setActionLoading(null);
-    }
+  const openCreate = () => {
+    setEditingUser(null);
+    setForm(emptyForm);
+    setShowForm(true);
   };
 
-  const handleBan = async (userId) => {
-    if (!window.confirm('Bannir cet utilisateur ?')) return;
-    setActionLoading(userId);
-    try {
-      await usersService.banUser(userId, 'Admin action');
-      await fetchUsers(page);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors du bannissement.');
-    } finally {
-      setActionLoading(null);
-    }
+  const openEdit = (userItem) => {
+    setEditingUser(userItem);
+    setForm({
+      name: userItem.name || '',
+      email: userItem.email || '',
+      password: '',
+      role: userItem.role || 'user',
+    });
+    setShowForm(true);
   };
 
-  const handleCreateUser = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setActionLoading('create');
+    setActionLoading(editingUser ? editingUser.id : 'create');
     setError(null);
-    console.log('Sending payload:', createForm);
+
     try {
-      await usersService.createUser(createForm);
-      setShowCreate(false);
-      setCreateForm({ name: '', email: '', password: '', role: 'user' });
+      if (!form.password && !editingUser) {
+        throw new Error('Le mot de passe est requis pour créer un utilisateur.');
+      }
+
+      const payload = {
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role: form.role,
+      };
+
+      if (editingUser) {
+        await usersService.updateUser(editingUser.id, payload);
+      } else {
+        await usersService.createUser(payload);
+      }
+
+      setShowForm(false);
+      setEditingUser(null);
+      setForm(emptyForm);
       await fetchUsers(page);
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la création.');
+      setError(err.response?.data?.message || err.message || 'Erreur lors de l\'enregistrement.');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const handleVerify = async (userId) => {
+  const handleDelete = async (userId) => {
+    if (!window.confirm('Supprimer définitivement cet utilisateur ?')) return;
     setActionLoading(userId);
     try {
-      await usersService.verifyUser(userId);
+      await usersService.deleteUser(userId);
       await fetchUsers(page);
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la vérification.');
+      setError(err.response?.data?.message || 'Erreur lors de la suppression.');
     } finally {
       setActionLoading(null);
     }
   };
+
+  const columns = useMemo(() => ['Nom', 'Rôle', 'Statut', 'Photo', 'Actions'], []);
 
   return (
     <div className="space-y-6 p-6">
@@ -110,58 +123,74 @@ const AdminUsers = () => {
         </div>
         <button
           type="button"
-          onClick={() => setShowCreate((v) => !v)}
-          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700"
+          onClick={openCreate}
+          className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700 inline-flex items-center gap-2"
         >
-          {showCreate ? 'Annuler' : 'Ajouter un utilisateur'}
+          <Plus size={16} />
+          Ajouter un utilisateur
         </button>
       </div>
 
-      {showCreate && (
-        <form
-          onSubmit={handleCreateUser}
-          className="bg-white rounded-2xl border border-gray-100 shadow-soft p-6 grid grid-cols-1 md:grid-cols-2 gap-4"
-        >
-          <input
-            type="text"
-            placeholder="Nom"
-            required
-            value={createForm.name}
-            onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            required
-            value={createForm.email}
-            onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          />
-          <input
-            type="password"
-            placeholder="Mot de passe (min. 8)"
-            required
-            minLength={8}
-            value={createForm.password}
-            onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          />
-          <select
-            value={createForm.role}
-            onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="user">Utilisateur</option>
-            <option value="entreprise">Entreprise</option>
-            {isAdmin(currentUser?.role) && <option value="admin">Administrateur</option>}
-          </select>
+      {showForm && (
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-soft p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">
+              {editingUser ? 'Modifier l’utilisateur' : 'Ajouter un utilisateur'}
+            </h2>
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Nom"
+              required
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <input
+              type="email"
+              placeholder="Email"
+              required
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <input
+              type="password"
+              placeholder={editingUser ? 'Mot de passe (laisser vide pour ne pas changer)' : 'Mot de passe'}
+              required={!editingUser}
+              minLength={8}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              className="border border-gray-200 rounded-lg px-3 py-2 text-sm"
+            >
+              {ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
             type="submit"
-            disabled={actionLoading === 'create'}
-            className="md:col-span-2 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+            disabled={actionLoading === 'create' || actionLoading === editingUser?.id}
+            className="py-2 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
           >
-            Créer l&apos;utilisateur
+            {editingUser ? 'Enregistrer les modifications' : 'Créer l’utilisateur'}
           </button>
         </form>
       )}
@@ -177,11 +206,14 @@ const AdminUsers = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Nom</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Rôle</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Statut</th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                {columns.map((col) => (
+                  <th
+                    key={col}
+                    className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase"
+                  >
+                    {col}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -200,51 +232,52 @@ const AdminUsers = () => {
                   </td>
                 </tr>
               ) : (
-                users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{user.name}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{user.email}</td>
-                    <td className="px-6 py-4">
-                      <select
-                        value={user.role || 'user'}
-                        disabled={actionLoading === user.id || user.id === currentUser?.id}
-                        onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                        className="text-sm border border-gray-200 rounded-lg px-2 py-1"
-                      >
-                        {ROLES.filter((r) => r !== 'admin' || isAdmin(currentUser?.role)).map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+                users.map((item) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{item.role || 'user'}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`text-xs font-medium px-2 py-1 rounded-full ${
-                          user.status === 'banned'
+                          item.status === 'banned'
                             ? 'bg-red-100 text-red-700'
                             : 'bg-emerald-100 text-emerald-700'
                         }`}
                       >
-                        {user.status === 'banned' ? 'Banni' : 'Actif'}
+                        {item.status === 'banned' ? 'Banni' : 'Actif'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {item.avatar ? (
+                        <img
+                          src={item.avatar}
+                          alt={item.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-500">
+                          {item.name?.slice(0, 2)?.toUpperCase() || 'NA'}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
                       <button
                         type="button"
-                        disabled={actionLoading === user.id || user.is_verified}
-                        onClick={() => handleVerify(user.id)}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50"
+                        disabled={actionLoading === item.id}
+                        onClick={() => openEdit(item)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 inline-flex items-center gap-1"
                       >
-                        Vérifier
+                        <Pencil size={14} />
+                        Modifier
                       </button>
                       <button
                         type="button"
-                        disabled={actionLoading === user.id}
-                        onClick={() => handleBan(user.id)}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50"
+                        disabled={actionLoading === item.id}
+                        onClick={() => handleDelete(item.id)}
+                        className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50 inline-flex items-center gap-1"
                       >
-                        Bannir
+                        <Trash2 size={14} />
+                        Supprimer
                       </button>
                     </td>
                   </tr>

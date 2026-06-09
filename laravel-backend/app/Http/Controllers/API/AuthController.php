@@ -84,18 +84,45 @@ class AuthController extends Controller
         ]);
     }
 
-    public function updateProfile(Request $request)
+    public function updatePassword(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'bio' => 'nullable|string|max:2000',
-            'password' => 'nullable|string|min:8|confirmed',
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:8|confirmed',
         ]);
 
         $user = $request->user();
 
+        if (! Hash::check($validated['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Le mot de passe actuel est incorrect.'],
+            ]);
+        }
+
+        $user->password = $validated['password'];
+        $user->save();
+
+        return response()->json([
+            'message' => 'Mot de passe mis à jour avec succès.',
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|max:255|unique:users,email,'.$user->id,
+            'bio' => 'nullable|string|max:2000',
+            'password' => 'nullable|string|min:8|confirmed',
+        ]);
+
         if (isset($validated['name'])) {
             $user->name = $validated['name'];
+        }
+        if (isset($validated['email'])) {
+            $user->email = $validated['email'];
         }
         if (array_key_exists('bio', $validated)) {
             $user->bio = $validated['bio'];
@@ -133,6 +160,28 @@ class AuthController extends Controller
             'message' => 'Avatar mis à jour.',
             'avatar' => $user->avatar,
             'user' => new UserResource($user->load('roles')),
+        ]);
+    }
+
+    public function destroyAccount(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->avatar && str_starts_with($user->avatar, '/storage/')) {
+            $oldPath = str_replace('/storage/', '', $user->avatar);
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $user->tokens()->delete();
+
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        $user->delete();
+
+        return response()->json([
+            'message' => 'Compte supprimÃ© avec succÃ¨s.',
         ]);
     }
 }

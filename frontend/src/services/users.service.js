@@ -14,8 +14,17 @@ export const usersService = {
   },
 
   createUser: async (payload) => {
-    console.log('payload', payload);
-    const response = await api.post('/admin/users', payload);
+    const response = await api.post('/admin/users', {
+      name: payload.name,
+      email: payload.email,
+      password: payload.password,
+      role: payload.role,
+    });
+    return response.data;
+  },
+
+  updateUser: async (id, payload) => {
+    const response = await api.put(`/admin/user/${id}`, payload);
     return response.data;
   },
 

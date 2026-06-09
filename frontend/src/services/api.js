@@ -7,6 +7,7 @@ const apiOrigin = (
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
   withCredentials: true,
+  withXSRFToken: true,
   xsrfCookieName: "XSRF-TOKEN",
   xsrfHeaderName: "X-XSRF-TOKEN",
   headers: {
@@ -23,7 +24,14 @@ export const getCsrf = () => {
 };
 
 // Request interceptor — attaches Bearer token if one is stored (token-auth fallback)
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
+  if (['post', 'put', 'patch', 'delete'].includes(config.method?.toLowerCase())) {
+    try {
+      await getCsrf();
+    } catch (e) {
+      // Ignorer si ça échoue, pour laisser la requête continuer
+    }
+  }
   const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

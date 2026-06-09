@@ -5,12 +5,14 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\ForumTopic;
 use App\Models\FreelanceJob;
 use App\Models\User;
 use App\Services\CourseService;
 use App\Support\RoleNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
@@ -27,6 +29,7 @@ class AdminController extends Controller
                 'courses' => Course::count(),
                 'published_courses' => Course::where('status', 'published')->count(),
                 'jobs' => FreelanceJob::count(),
+                'forum_topics' => ForumTopic::count(),
             ],
             'recent_activity' => [],
         ]);
@@ -77,9 +80,9 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email',
+            'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'role' => ['required', Rule::in(RoleNormalizer::ROLES)],
+            'role' => 'required|in:admin,user,entreprise',
         ]);
 
         $user = User::create([
@@ -97,6 +100,64 @@ class AdminController extends Controller
             'message' => 'Utilisateur créé.',
             'user' => $user->load('roles'),
         ], 201);
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|max:255|unique:users,email,'.$user->id,
+            'password' => 'nullable|string|min:8',
+            'role' => ['sometimes', Rule::in(RoleNormalizer::ROLES)],
+            'status' => 'sometimes|in:active,banned',
+            'photo' => 'nullable|image|max:2048',
+        ]);
+
+        if ($request->hasFile('photo')) {
+            if ($user->avatar && str_starts_with($user->avatar, '/storage/')) {
+                Storage::disk('public')->delete(str_replace('/storage/', '', $user->avatar));
+            }
+
+            $user->avatar = '/storage/'.$request->file('photo')->store('avatars', 'public');
+        }
+
+        if (isset($validated['name'])) {
+            $user->name = $validated['name'];
+        }
+        if (isset($validated['email'])) {
+            $user->email = $validated['email'];
+        }
+        if (! empty($validated['password'])) {
+            $user->password = $validated['password'];
+        }
+        if (isset($validated['status'])) {
+            $user->status = $validated['status'];
+        }
+        if (isset($validated['role'])) {
+            $user->syncRoles([$validated['role']]);
+            $user->role = $validated['role'];
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'Utilisateur mis a jour.',
+            'user' => $user->load('roles'),
+        ]);
+    }
+
+    public function destroyUser(User $user)
+    {
+        if ($user->avatar && str_starts_with($user->avatar, '/storage/')) {
+            Storage::disk('public')->delete(str_replace('/storage/', '', $user->avatar));
+        }
+
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json([
+            'message' => 'Utilisateur supprime.',
+        ]);
     }
 
     public function updateRole(Request $request, User $user)
@@ -148,12 +209,16 @@ class AdminController extends Controller
             'price' => 'nullable|numeric|min:0',
             'level' => 'nullable|in:beginner,intermediate,expert',
             'status' => 'nullable|in:draft,published,archived',
-            'thumbnail' => 'nullable|string|max:2048',
+            'photo' => 'nullable|image|max:2048',
             'instructor_id' => 'nullable|exists:users,id',
         ]);
 
         $instructorId = $validated['instructor_id'] ?? $request->user()->id;
         unset($validated['instructor_id']);
+
+        if ($request->hasFile('photo')) {
+            $validated['thumbnail'] = '/storage/'.$request->file('photo')->store('courses', 'public');
+        }
 
         $course = $this->courseService->createCourse($validated, $instructorId);
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FreelanceJob;
 use App\Models\Proposal;
 use Illuminate\Http\Request;
+use App\Support\RoleNormalizer;
 
 class JobController extends Controller
 {
@@ -99,7 +100,9 @@ class JobController extends Controller
     {
         $job = FreelanceJob::findOrFail($id);
 
-        if (! $request->user()->can('manage marketplace') && $job->client_id !== $request->user()->id) {
+        $isAdmin = RoleNormalizer::isAdmin($request->user()->role ?? null);
+
+        if (! $isAdmin && ! $request->user()->can('manage marketplace') && $job->client_id !== $request->user()->id) {
             abort(403);
         }
 
@@ -121,7 +124,9 @@ class JobController extends Controller
     {
         $job = FreelanceJob::findOrFail($id);
 
-        if (! $request->user()->can('manage marketplace') && $job->client_id !== $request->user()->id) {
+        $isAdmin = RoleNormalizer::isAdmin($request->user()->role ?? null);
+
+        if (! $isAdmin && ! $request->user()->can('manage marketplace') && $job->client_id !== $request->user()->id) {
             abort(403);
         }
 

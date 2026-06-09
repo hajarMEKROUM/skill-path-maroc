@@ -1,8 +1,8 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { useEffect } from 'react';
-import MainLayout from './components/layout/MainLayout';
+import HomeLayout from './components/layout/HomeLayout';
+import SidebarLayout from './layouts/SidebarLayout';
 import HomePage from './pages/HomePage';
-import DashboardLayout from './layouts/DashboardLayout';
 import StudentDashboard from './pages/dashboard/StudentDashboard';
 import StudentCourses from './pages/dashboard/StudentCourses';
 import MyCertifications from './pages/dashboard/MyCertifications';
@@ -13,7 +13,7 @@ import AdminDashboard from './pages/dashboard/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminCourses from './pages/admin/AdminCourses';
 import AdminMarketplace from './pages/admin/AdminMarketplace';
-import AdminReports from './pages/admin/AdminReports';
+import AdminCommunity from './pages/admin/AdminCommunity';
 import useAuthStore from './store/authStore';
 import { dashboardPathForRole } from './utils/roles';
 
@@ -25,10 +25,13 @@ import CourseCatalog from './pages/learning/CourseCatalog';
 import CourseDetail from './pages/learning/CourseDetail';
 import LearningPlayer from './pages/learning/LearningPlayer';
 import PlacementTest from './pages/learning/PlacementTest';
-import MissionsFeed from './pages/freelance/MissionsFeed';
 import Forum from './pages/community/Forum';
 import TopicDetail from './pages/community/TopicDetail';
-import Profile from './pages/Profile';
+import DashboardProfile from './pages/dashboard/Profile';
+import FreelancePage from './pages/dashboard/FreelancePage';
+import EmploymentJobs from './pages/dashboard/EmploymentJobs';
+import Jobs from './pages/dashboard/Jobs';
+import Marketplace from './pages/Marketplace';
 
 function App() {
   const { checkAuth } = useAuthStore();
@@ -40,68 +43,75 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route element={<MainLayout />}>
+        {/* Accueil uniquement — navbar horizontale */}
+        <Route element={<HomeLayout />}>
           <Route path="/" element={<HomePage />} />
+        </Route>
+
+        {/* Toutes les autres pages — sidebar verticale */}
+        <Route element={<SidebarLayout />}>
           <Route path="/courses" element={<CourseCatalog />} />
           <Route path="/courses/:id" element={<CourseDetail />} />
-          <Route path="/jobs" element={<MissionsFeed />} />
+          <Route path="/marketplace" element={<Marketplace />} />
           <Route path="/community" element={<Forum />} />
           <Route path="/community/:id" element={<TopicDetail />} />
+          <Route path="/jobs" element={<Navigate to="/marketplace" replace />} />
+
+          <Route
+            path="/placement-test"
+            element={
+              <ProtectedRoute>
+                <PlacementTest />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="/profile" element={<Navigate to="/dashboard/profile" replace />} />
+          <Route path="/settings" element={<Navigate to="/dashboard/settings" replace />} />
+          <Route path="/certificates" element={<Navigate to="/dashboard/certificates" replace />} />
+
+          <Route path="/dashboard" element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
+            <Route index element={<DashboardRedirect />} />
+
+            <Route element={<ProtectedRoute allowedRoles={['user']} />}>
+              <Route path="user" element={<StudentDashboard />} />
+              <Route path="courses" element={<StudentCourses />} />
+              <Route path="certificates" element={<MyCertifications />} />
+              <Route path="messages" element={<Messages />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="learning/:courseId" element={<LearningPlayer />} />
+              <Route path="learn/:courseId" element={<LearningPlayer />} />
+              <Route path="freelance" element={<FreelancePage />} />
+              <Route path="employment" element={<EmploymentJobs />} />
+              <Route path="profile" element={<DashboardProfile />} />
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['entreprise']} />}>
+              <Route path="enterprise" element={<EnterpriseDashboard />} />
+              <Route path="messages" element={<Messages />} />
+              <Route path="settings" element={<Settings />} />
+              <Route path="jobs" element={<Jobs />} />
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="admin" element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="courses-admin" element={<AdminCourses />} />
+            <Route path="marketplace" element={<AdminMarketplace />} />
+            <Route path="community-admin" element={<AdminCommunity />} />
+            <Route path="profile" element={<DashboardProfile />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
+
+            <Route path="student" element={<Navigate to="/dashboard/user" replace />} />
+            <Route path="instructor" element={<Navigate to="/dashboard/user" replace />} />
+            <Route path="freelancer" element={<Navigate to="/dashboard/user" replace />} />
+          </Route>
         </Route>
 
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-
-        <Route
-          path="/placement-test"
-          element={
-            <ProtectedRoute>
-              <PlacementTest />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-          <Route index element={<DashboardRedirect />} />
-
-          <Route element={<ProtectedRoute allowedRoles={['user']} />}>
-            <Route path="user" element={<StudentDashboard />} />
-            <Route path="courses" element={<StudentCourses />} />
-            <Route path="certificates" element={<MyCertifications />} />
-            <Route path="messages" element={<Messages />} />
-            <Route path="settings" element={<Settings />} />
-            <Route path="learn/:courseId" element={<LearningPlayer />} />
-          </Route>
-
-          <Route element={<ProtectedRoute allowedRoles={['entreprise']} />}>
-            <Route path="enterprise" element={<EnterpriseDashboard />} />
-            <Route path="messages" element={<Messages />} />
-            <Route path="settings" element={<Settings />} />
-          </Route>
-
-          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="admin" element={<AdminDashboard />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="courses-admin" element={<AdminCourses />} />
-            <Route path="marketplace" element={<AdminMarketplace />} />
-            <Route path="reports" element={<AdminReports />} />
-          </Route>
-
-          {/* Legacy redirects */}
-          <Route path="student" element={<Navigate to="/dashboard/user" replace />} />
-          <Route path="instructor" element={<Navigate to="/dashboard/user" replace />} />
-          <Route path="freelancer" element={<Navigate to="/dashboard/user" replace />} />
-        </Route>
       </Routes>
     </Router>
   );

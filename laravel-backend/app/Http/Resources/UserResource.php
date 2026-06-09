@@ -17,6 +17,8 @@ class UserResource extends JsonResource
             'role' => RoleNormalizer::normalize($this->role),
             'avatar' => $this->avatar,
             'bio' => $this->bio,
+            'status' => $this->status,
+            'is_verified' => $this->is_verified,
             'roles' => $this->whenLoaded('roles'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

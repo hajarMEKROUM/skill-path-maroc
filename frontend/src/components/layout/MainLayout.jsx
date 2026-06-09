@@ -21,8 +21,8 @@ const MainLayout = () => {
       <Link to="/courses" className="text-gray-600 hover:text-primary-600 font-medium flex items-center gap-2 transition-colors">
         <BookOpen size={18} /> Cours
       </Link>
-      <Link to="/jobs" className="text-gray-600 hover:text-primary-600 font-medium flex items-center gap-2 transition-colors">
-        <Briefcase size={18} /> Jobs
+      <Link to="/marketplace" className="text-gray-600 hover:text-primary-600 font-medium flex items-center gap-2 transition-colors">
+        <Briefcase size={18} /> Missions
       </Link>
       <Link to="/community" className="text-gray-600 hover:text-primary-600 font-medium flex items-center gap-2 transition-colors">
         <MessageSquare size={18} /> Communauté
@@ -33,7 +33,7 @@ const MainLayout = () => {
   const authLinks = isAuthenticated ? (
     <div className="flex items-center gap-4 ml-4">
       <Link to="/dashboard" className="text-gray-600 hover:text-primary-600 font-medium flex items-center gap-2">
-        <LayoutDashboard size={18} /> Dashboard
+        <LayoutDashboard size={18} /> Tableau de bord
       </Link>
       <Link to="/profile" className="text-gray-600 hover:text-primary-600 font-medium flex items-center gap-2">
         <User size={18} /> Profil
@@ -98,7 +98,7 @@ const MainLayout = () => {
               Cours
             </Link>
             <Link to="/jobs" className="block px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50" onClick={() => setIsMenuOpen(false)}>
-              Jobs
+              Missions
             </Link>
             <Link to="/community" className="block px-3 py-3 rounded-md text-base font-medium text-gray-700 hover:text-primary-600 hover:bg-gray-50" onClick={() => setIsMenuOpen(false)}>
               Communauté
@@ -106,7 +106,7 @@ const MainLayout = () => {
             <div className="border-t border-gray-100 my-2 pt-2">
               {isAuthenticated ? (
                 <>
-                  <Link to="/dashboard" className="block px-3 py-3 rounded-md text-base font-medium text-gray-700" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
+                  <Link to="/dashboard" className="block px-3 py-3 rounded-md text-base font-medium text-gray-700" onClick={() => setIsMenuOpen(false)}>Tableau de bord</Link>
                   <Link to="/profile" className="block px-3 py-3 rounded-md text-base font-medium text-gray-700" onClick={() => setIsMenuOpen(false)}>Profil</Link>
                   <button type="button" onClick={() => { setIsMenuOpen(false); handleLogout(); }} className="block w-full text-left px-3 py-3 text-base font-medium text-red-600">
                     Déconnexion
@@ -146,7 +146,7 @@ const MainLayout = () => {
               <h3 className="font-semibold text-lg mb-6 text-gray-100">Plateforme</h3>
               <ul className="space-y-4 text-sm text-gray-400">
                 <li><Link to="/courses" className="hover:text-primary-400 transition-colors">Catalogue de cours</Link></li>
-                <li><Link to="/jobs" className="hover:text-primary-400 transition-colors">Missions freelance</Link></li>
+                <li><Link to="/marketplace" className="hover:text-primary-400 transition-colors">Missions freelance</Link></li>
                 <li><Link to="/community" className="hover:text-primary-400 transition-colors">Forum</Link></li>
               </ul>
             </div>
@@ -154,8 +154,7 @@ const MainLayout = () => {
             <div>
               <h3 className="font-semibold text-lg mb-6 text-gray-100">Ressources</h3>
               <ul className="space-y-4 text-sm text-gray-400">
-                <li><Link to="/placement-test" className="hover:text-primary-400 transition-colors">Test de positionnement</Link></li>
-                <li><Link to="/register" className="hover:text-primary-400 transition-colors">Créer un compte</Link></li>
+                {!isAuthenticated && <li><Link to="/register" className="hover:text-primary-400 transition-colors">Créer un compte</Link></li>}
               </ul>
             </div>
 
@@ -163,7 +162,7 @@ const MainLayout = () => {
               <h3 className="font-semibold text-lg mb-6 text-gray-100">Contact</h3>
               <ul className="space-y-4 text-sm text-gray-400">
                 <li>contact@skillpathmaroc.ma</li>
-                <li>Casablanca, Morocco</li>
+                <li>Casablanca, Maroc</li>
               </ul>
             </div>
           </div>

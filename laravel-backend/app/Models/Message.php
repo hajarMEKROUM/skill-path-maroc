@@ -14,6 +14,9 @@ class Message extends Model
         'user_id',
         'body',
         'read_at',
+        'attachment_path',
+        'attachment_type',
+        'attachment_name',
     ];
 
     protected $casts = [

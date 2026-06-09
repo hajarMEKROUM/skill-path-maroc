@@ -24,8 +24,8 @@ export const freelanceService = {
     return response.data;
   },
 
-  submitProposal: async (missionId, data) => {
-    const response = await api.post(`/freelance/missions/${missionId}/proposals`, data);
+  submitProposal: async (data) => {
+    const response = await api.post('/proposals', data);
     return response.data;
   },
 
@@ -35,6 +35,19 @@ export const freelanceService = {
   },
 
   sendMessage: async (conversationId, messageData) => {
+    if (messageData.file) {
+      const formData = new FormData();
+      formData.append('attachment', messageData.file);
+      if (messageData.content) {
+        formData.append('content', messageData.content);
+      }
+      const response = await api.post(
+        `/chat/conversations/${conversationId}/messages`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+      return response.data;
+    }
     const response = await api.post(
       `/chat/conversations/${conversationId}/messages`,
       messageData
@@ -44,6 +57,16 @@ export const freelanceService = {
 
   getConversations: async () => {
     const response = await api.get('/chat/conversations');
+    return response.data;
+  },
+
+  searchUsers: async (query) => {
+    const response = await api.get('/users', { params: { search: query } });
+    return response.data;
+  },
+
+  startConversation: async (recipientId) => {
+    const response = await api.post('/chat/conversations', { recipient_id: recipientId });
     return response.data;
   },
 };

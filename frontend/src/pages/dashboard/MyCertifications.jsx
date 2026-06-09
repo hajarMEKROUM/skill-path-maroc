@@ -1,11 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Award, Download, Loader2 } from 'lucide-react';
+import { Award, Download } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import api from '../../services/api';
 
 const statusStyles = {
   validated: 'bg-emerald-100 text-emerald-700',
   pending: 'bg-amber-100 text-amber-700',
   refused: 'bg-red-100 text-red-700',
+};
+
+const statusTranslation = {
+  validated: 'validé',
+  pending: 'en attente',
+  refused: 'refusé',
 };
 
 const MyCertifications = () => {
@@ -15,21 +22,30 @@ const MyCertifications = () => {
   const [downloadingId, setDownloadingId] = useState(null);
 
   useEffect(() => {
+    let mounted = true;
     const fetchCerts = async () => {
       setIsLoading(true);
       setError(null);
       try {
         const response = await api.get('/certifications');
-        const data = response.data.data ?? response.data;
-        setCertifications(Array.isArray(data) ? data : []);
+        if (mounted) {
+          const data = response.data.data ?? response.data;
+          setCertifications(Array.isArray(data) ? data : []);
+        }
       } catch (err) {
-        setError(err.response?.data?.message || 'Impossible de charger les certifications.');
-        setCertifications([]);
+        if (mounted) {
+          setError(err.response?.data?.message || 'Impossible de charger les certifications.');
+          setCertifications([]);
+        }
       } finally {
-        setIsLoading(false);
+        if (mounted) setIsLoading(false);
       }
     };
     fetchCerts();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleDownload = async (id) => {
@@ -56,18 +72,10 @@ const MyCertifications = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="animate-spin text-primary-600" size={32} />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-        <Award className="text-primary-600" size={22} />
+      <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+        <Award className="text-purple-600" size={22} />
         Mes certifications
       </h2>
 
@@ -77,8 +85,27 @@ const MyCertifications = () => {
         </div>
       )}
 
-      {certifications.length === 0 ? (
-        <p className="text-gray-500 text-sm">Aucune certification pour le moment. Terminez un cours pour en obtenir une.</p>
+      {isLoading ? (
+        <ul className="space-y-3">
+          {[...Array(2)].map((_, i) => (
+            <li key={i} className="animate-pulse page-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="space-y-2 flex-1">
+                <div className="h-5 bg-gray-200 rounded w-48" />
+                <div className="h-3 bg-gray-200 rounded w-24" />
+              </div>
+              <div className="h-8 bg-gray-200 rounded w-20" />
+            </li>
+          ))}
+        </ul>
+      ) : certifications.length === 0 ? (
+        <div className="page-card text-center py-10">
+          <Award className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+          <p className="text-gray-900 font-medium text-lg">Vous n&apos;avez pas encore de certificat.</p>
+          <p className="text-gray-500 mt-1 mb-4">Terminez une formation pour obtenir une certification officielle.</p>
+          <Link to="/courses" className="btn-primary py-2 px-6 inline-block">
+            Découvrir nos formations
+          </Link>
+        </div>
       ) : (
         <ul className="space-y-3">
           {certifications.map((cert) => {
@@ -86,7 +113,7 @@ const MyCertifications = () => {
             return (
               <li
                 key={cert.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white border border-gray-100 rounded-xl p-4"
+                className="page-card flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
               >
                 <div>
                   <p className="font-medium text-gray-900">{cert.course_title || `Cours #${cert.course_id}`}</p>
@@ -98,8 +125,8 @@ const MyCertifications = () => {
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${statusStyles[status] || statusStyles.pending}`}>
-                    {status}
+                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusStyles[status] || statusStyles.pending}`}>
+                    {statusTranslation[status] || status}
                   </span>
                   {status === 'validated' && (
                     <button
@@ -109,7 +136,7 @@ const MyCertifications = () => {
                       className="btn-primary flex items-center gap-2 py-1.5 px-3 text-sm disabled:opacity-50"
                     >
                       <Download size={14} />
-                      {downloadingId === cert.id ? '...' : 'PDF'}
+                      {downloadingId === cert.id ? 'Téléchargement...' : 'Télécharger'}
                     </button>
                   )}
                 </div>

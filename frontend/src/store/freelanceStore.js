@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { freelanceService } from '../services/freelance.service';
+import useAuthStore from './authStore';
 
 const useFreelanceStore = create((set, get) => ({
   missions: [],
@@ -64,8 +65,12 @@ const useFreelanceStore = create((set, get) => ({
 
     set({ isSubmittingProposal: true });
     try {
-      await freelanceService.submitProposal(selectedMissionId, rawData);
+      const data = await freelanceService.submitProposal({
+        mission_id: selectedMissionId,
+        ...rawData,
+      });
       set({ isSubmittingProposal: false, proposalModalOpen: false, selectedMissionId: null });
+      return data;
     } catch (error) {
       set({ isSubmittingProposal: false });
       throw error;
@@ -107,11 +112,12 @@ const useFreelanceStore = create((set, get) => ({
     if (!activeConversationId) return;
 
     const tempId = Date.now();
+    const currentUserId = useAuthStore.getState().user?.id || 'me';
     const optimisticMessage = {
       id: tempId,
       conversation_id: activeConversationId,
       content: msgData.content,
-      sender_id: 'me',
+      sender_id: currentUserId,
       created_at: new Date().toISOString(),
       isPending: true,
     };

@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -67,7 +66,7 @@ describe('ProposalModal', () => {
     await waitFor(() => {
       expect(mockSubmitProposal).toHaveBeenCalledWith({
         bid_amount: '3500',
-        delivery_days: '7',
+        delivery_time: '7',
         cover_letter: 'This is my cover letter.'
       });
     });

@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { User, Loader2, Save, Upload, Settings as SettingsIcon } from 'lucide-react';
-import api from '../../services/api';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, Save, Settings as SettingsIcon, Eye, EyeOff, LogOut, Trash2, Upload } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import api from '../../services/api';
 
 const apiOrigin = (
   import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
@@ -15,200 +15,290 @@ const getAvatarUrl = (avatar) => {
   return `${apiOrigin}${path}`;
 };
 
+const Feedback = ({ success, error }) => (
+  <>
+    {success && (
+      <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg text-sm">
+        {success}
+      </div>
+    )}
+    {error && (
+      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+        {error}
+      </div>
+    )}
+  </>
+);
+
 export default function Settings() {
-  const { user, checkAuth } = useAuthStore();
-  const [form, setForm] = useState({ name: '', bio: '', password: '', password_confirmation: '' });
+  const { user, checkAuth, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    bio: '',
+    current_password: '',
+    password: '',
+    password_confirmation: '',
+  });
   const [avatarFile, setAvatarFile] = useState(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [message, setMessage] = useState(null);
-  const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (user) {
-      setForm({
+      setForm((state) => ({
+        ...state,
         name: user.name || '',
+        email: user.email || '',
         bio: user.bio || '',
-        password: '',
-        password_confirmation: '',
-      });
+      }));
     }
   }, [user]);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setMessage(null);
-    setError(null);
+  const clearStatus = () => {
+    setSuccess('');
+    setError('');
   };
 
-  const handleSave = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsSaving(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const payload = { name: form.name, bio: form.bio };
-      if (form.password) {
-        payload.password = form.password;
-        payload.password_confirmation = form.password_confirmation;
+    clearStatus();
+
+    if (form.password || form.current_password || form.password_confirmation) {
+      if (!form.current_password || !form.password || !form.password_confirmation) {
+        setError('Renseignez le mot de passe actuel, le nouveau mot de passe et sa confirmation.');
+        return;
       }
-      await api.put('/profile', payload);
+      if (form.password !== form.password_confirmation) {
+        setError('Les mots de passe ne correspondent pas.');
+        return;
+      }
+    }
+
+    setLoading(true);
+
+    try {
+      if (avatarFile) {
+        const avatarData = new FormData();
+        avatarData.append('avatar', avatarFile);
+        await api.post('/profile/avatar', avatarData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
+      await api.put('/user/profile', {
+        name: form.name,
+        email: form.email,
+        bio: form.bio,
+      });
+
+      if (form.password || form.current_password || form.password_confirmation) {
+        await api.put('/user/password', {
+          current_password: form.current_password,
+          password: form.password,
+          password_confirmation: form.password_confirmation,
+        });
+      }
+
       await checkAuth();
-      setMessage('Profil mis à jour avec succès.');
-      setForm((prev) => ({ ...prev, password: '', password_confirmation: '' }));
+      setAvatarFile(null);
+      setForm((state) => ({
+        ...state,
+        current_password: '',
+        password: '',
+        password_confirmation: '',
+      }));
+      setSuccess('Profil mis à jour avec succès.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la mise à jour.');
+      setError(err.response?.data?.message || err.message || 'Impossible de mettre à jour le profil.');
     } finally {
-      setIsSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleAvatarUpload = async (e) => {
-    e.preventDefault();
-    if (!avatarFile) return;
-    setIsUploading(true);
-    setError(null);
-    setMessage(null);
+  const handleDeleteAccount = async () => {
+    clearStatus();
+    if (!window.confirm('Supprimer définitivement votre compte ? Cette action est irréversible.')) return;
+
+    setLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('avatar', avatarFile);
-      await api.post('/profile/avatar', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      await checkAuth();
-      setMessage('Photo de profil mise à jour.');
-      setAvatarFile(null);
+      await api.delete('/user');
+      await logout().catch(() => {});
+      navigate('/login');
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors du téléversement.');
-    } finally {
-      setIsUploading(false);
+      setError(err.response?.data?.message || 'Impossible de supprimer le compte.');
+      setLoading(false);
     }
   };
 
   if (!user) {
     return (
       <div className="flex justify-center py-24">
-        <Loader2 className="animate-spin text-primary-600" size={40} />
+        <Loader2 className="animate-spin text-purple-600" size={40} />
       </div>
     );
   }
 
-  const avatarUrl = getAvatarUrl(user.avatar);
-
   return (
-    <div className="p-6 space-y-6 max-w-2xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <SettingsIcon className="text-primary-600" />
+    <div className="space-y-6 max-w-2xl">
+      <div>
+        <h1 className="page-title flex items-center gap-2">
+          <SettingsIcon className="text-purple-600" />
           Paramètres
         </h1>
-        <Link to="/profile" className="text-sm text-primary-600 hover:underline">
-          ← Voir mon profil
-        </Link>
+        <p className="text-gray-500 mt-1">
+          Modifiez vos informations sur un seul formulaire.
+        </p>
       </div>
 
-      <p className="text-gray-500">
-        Gérez votre profil, votre mot de passe et vos préférences de compte.
-      </p>
+      <form onSubmit={handleSubmit} className="page-card space-y-6">
+        <Feedback success={success} error={error} />
 
-      {message && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-lg">
-          {message}
-        </div>
-      )}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-soft">
-        <div className="flex items-center gap-6 mb-6">
-          <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-            ) : (
-              <User className="text-primary-600" size={36} />
-            )}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Photo</label>
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center border border-gray-200">
+              {user.avatar ? (
+                <img src={getAvatarUrl(user.avatar)} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-gray-400 text-sm font-semibold">
+                  {user.name?.slice(0, 2)?.toUpperCase() || 'SP'}
+                </span>
+              )}
+            </div>
+            <label className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer">
+              <Upload size={16} />
+              Choisir une photo
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  setAvatarFile(e.target.files?.[0] || null);
+                  clearStatus();
+                }}
+              />
+            </label>
+            {avatarFile && <span className="text-sm text-gray-500 truncate">{avatarFile.name}</span>}
           </div>
-          <div>
-            <p className="font-medium text-gray-900">{user.email}</p>
-            <p className="text-sm text-gray-500 capitalize">Rôle : {user.role}</p>
-          </div>
         </div>
 
-        <form onSubmit={handleAvatarUpload} className="flex flex-wrap items-end gap-4 border-t border-gray-100 pt-6">
+        <div className="grid grid-cols-1 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Photo de profil</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nom complet</label>
             <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
-              className="text-sm text-gray-600"
+              type="text"
+              value={form.name}
+              onChange={(e) => { setForm({ ...form, name: e.target.value }); clearStatus(); }}
+              className="input-field"
+              required
             />
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Adresse email</label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => { setForm({ ...form, email: e.target.value }); clearStatus(); }}
+              className="input-field"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+            <textarea
+              rows={4}
+              value={form.bio}
+              onChange={(e) => { setForm({ ...form, bio: e.target.value }); clearStatus(); }}
+              className="input-field"
+              placeholder="Parlez un peu de vous..."
+            />
+          </div>
+        </div>
+
+        <div className="space-y-4 pt-2">
+          <h2 className="text-lg font-semibold text-gray-800">Mot de passe</h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe actuel</label>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={form.current_password}
+                onChange={(e) => { setForm({ ...form, current_password: e.target.value }); clearStatus(); }}
+                className="input-field pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Nouveau mot de passe</label>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={form.password}
+              onChange={(e) => { setForm({ ...form, password: e.target.value }); clearStatus(); }}
+              className="input-field"
+              minLength={8}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Confirmation du nouveau mot de passe</label>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={form.password_confirmation}
+              onChange={(e) => { setForm({ ...form, password_confirmation: e.target.value }); clearStatus(); }}
+              className="input-field"
+              minLength={8}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             type="submit"
-            disabled={!avatarFile || isUploading}
-            className="btn-secondary flex items-center gap-2 py-2 px-4 disabled:opacity-50"
+            disabled={loading}
+            className="btn-primary flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            <Upload size={16} />
-            {isUploading ? 'Envoi...' : 'Téléverser'}
+            <Save size={18} />
+            {loading ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </button>
-        </form>
-      </div>
 
-      <form onSubmit={handleSave} className="bg-white rounded-2xl border border-gray-100 p-6 shadow-soft space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
-          <input
-            type="text"
-            name="name"
-            value={form.name}
-            onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-            required
-          />
+          <button
+            type="button"
+            onClick={handleDeleteAccount}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            <Trash2 size={18} />
+            Supprimer mon compte
+          </button>
+
+          <button
+            type="button"
+            onClick={async () => {
+              await logout();
+              navigate('/login');
+            }}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            <LogOut size={18} />
+            Déconnexion
+          </button>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
-          <textarea
-            name="bio"
-            value={form.bio}
-            onChange={handleChange}
-            rows={4}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-          />
-        </div>
-        <div className="border-t border-gray-100 pt-4">
-          <p className="text-sm font-medium text-gray-700 mb-3">Changer le mot de passe (optionnel)</p>
-          <div className="space-y-3">
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="Nouveau mot de passe"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            />
-            <input
-              type="password"
-              name="password_confirmation"
-              value={form.password_confirmation}
-              onChange={handleChange}
-              placeholder="Confirmer le mot de passe"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2"
-            />
-          </div>
-        </div>
-        <button
-          type="submit"
-          disabled={isSaving}
-          className="btn-primary flex items-center gap-2 py-2 px-6 disabled:opacity-50"
-        >
-          <Save size={18} />
-          {isSaving ? 'Enregistrement...' : 'Enregistrer'}
-        </button>
       </form>
     </div>
   );

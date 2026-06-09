@@ -23,5 +23,6 @@ class DatabaseSeeder extends Seeder
             PlacementQuestionSeeder::class,
         ]);
         $this->call(RoleSeeder::class);
+        $this->call(CourseSeeder::class);
     }
 }

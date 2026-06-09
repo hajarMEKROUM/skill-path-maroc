@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Events\MessageSent;
 use App\Http\Controllers\Controller;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ChatController extends Controller
 {
@@ -56,17 +59,48 @@ class ChatController extends Controller
         abort_unless($conversation->involvesUser($request->user()->id), 403);
 
         $validated = $request->validate([
-            'content' => 'required|string|max:5000',
+            'content' => 'nullable|string|max:5000',
+            'attachment' => 'nullable|file|mimes:pdf,docx|max:5120',
         ]);
+
+        if (empty($validated['content']) && ! $request->hasFile('attachment')) {
+            return response()->json(['message' => 'Un message ou une piece jointe est requis.'], 422);
+        }
+
+        $attachmentPath = null;
+        $attachmentType = null;
+        $attachmentName = null;
+
+        if ($request->hasFile('attachment')) {
+            [$attachmentPath, $attachmentType, $attachmentName] = $this->upload($request->file('attachment'));
+        }
 
         $message = $conversation->messages()->create([
             'user_id' => $request->user()->id,
-            'body' => $validated['content'],
+            'body' => $validated['content'] ?? '',
+            'attachment_path' => $attachmentPath,
+            'attachment_type' => $attachmentType,
+            'attachment_name' => $attachmentName,
         ]);
 
         $conversation->touch();
 
-        return response()->json($this->formatMessage($message->load('user:id,name')), 201);
+        $message->load('user:id,name');
+        broadcast(new MessageSent($message))->toOthers();
+
+        return response()->json($this->formatMessage($message), 201);
+    }
+
+    public function upload($file): array
+    {
+        $path = $file->store('attachments', 'public');
+
+        return [
+            $path,
+            $file->getMimeType(),
+            $file->getClientOriginalName(),
+            Storage::url($path),
+        ];
     }
 
     public function startConversation(Request $request)
@@ -98,6 +132,9 @@ class ChatController extends Controller
                 'body' => $validated['content'],
             ]);
             $conversation->touch();
+
+            $message->load('user:id,name');
+            broadcast(new MessageSent($message))->toOthers();
         }
 
         $conversation->load(['userOne:id,name,avatar', 'userTwo:id,name,avatar']);
@@ -134,10 +171,29 @@ class ChatController extends Controller
             'content' => $message->body,
             'sender_id' => $message->user_id,
             'created_at' => $message->created_at,
+            'attachment_url' => $message->attachment_path ? Storage::url($message->attachment_path) : null,
+            'attachment_type' => $message->attachment_type,
+            'attachment_name' => $message->attachment_name,
             'user' => $message->relationLoaded('user') && $message->user ? [
                 'id' => $message->user->id,
                 'name' => $message->user->name,
             ] : null,
         ];
+    }
+
+    public function searchUsers(Request $request)
+    {
+        $query = $request->input('search', $request->input('q'));
+
+        if (empty($query) || strlen($query) < 2) {
+            return response()->json(['data' => []]);
+        }
+
+        $users = User::where('name', 'like', "%{$query}%")
+            ->where('id', '!=', $request->user()->id)
+            ->limit(10)
+            ->get(['id', 'name', 'avatar']);
+
+        return response()->json(['data' => $users]);
     }
 }

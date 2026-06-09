@@ -93,7 +93,7 @@ const AdminReports = () => {
     return (
       <div style={{ width: '100%', minHeight: 300 }}>
         {isMounted ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={300}>
             <LineChart data={safeData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
@@ -121,7 +121,7 @@ const AdminReports = () => {
     return (
       <div style={{ width: '100%', minHeight: 300 }}>
         {isMounted ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={300}>
             <BarChart data={safeData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />

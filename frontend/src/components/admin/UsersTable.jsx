@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MoreVertical, Shield, CheckCircle, XCircle, Mail, Clock } from 'lucide-react';
+import { MoreVertical, Shield, CheckCircle, XCircle, Mail, Clock, Edit2, Trash2 } from 'lucide-react';
 import GlassCard from '../ui/GlassCard';
 
 const UsersTable = ({ users, isLoading, onActionClick }) => {
@@ -107,12 +107,22 @@ const UsersTable = ({ users, isLoading, onActionClick }) => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      onClick={() => onActionClick(user)}
-                      className="text-gray-400 hover:text-primary-600 transition-colors p-1 rounded-full hover:bg-primary-50"
-                    >
-                      <MoreVertical size={20} />
-                    </button>
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => onActionClick('edit', user)}
+                        className="text-gray-400 hover:text-blue-600 transition-colors p-1.5 rounded-full hover:bg-blue-50"
+                        title="Modifier"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        onClick={() => onActionClick('delete', user)}
+                        className="text-gray-400 hover:text-red-600 transition-colors p-1.5 rounded-full hover:bg-red-50"
+                        title="Supprimer"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </motion.tr>
               ))

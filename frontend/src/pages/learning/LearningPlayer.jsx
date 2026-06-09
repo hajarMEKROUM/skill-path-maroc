@@ -1,23 +1,32 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import useLearningStore from '../../store/learningStore';
 import VideoPlayer from '../../components/learning/VideoPlayer';
 import LessonSidebar from '../../components/learning/LessonSidebar';
 import LessonContent from '../../components/learning/LessonContent';
-import { ArrowLeft } from 'lucide-react';
 
 const LearningPlayer = () => {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { initPlayer, currentLesson, isLoading, error } = useLearningStore();
+  const {
+    initPlayer,
+    currentLesson,
+    isLoading,
+    error,
+    selectLesson,
+    getNextLessonId,
+    getPreviousLessonId,
+  } = useLearningStore();
 
   useEffect(() => {
     if (courseId) {
       initPlayer(courseId);
     }
-    
-    // Cleanup on unmount can be added here if needed
   }, [courseId, initPlayer]);
+
+  const nextLessonId = getNextLessonId();
+  const previousLessonId = getPreviousLessonId();
 
   if (isLoading && !currentLesson) {
     return (
@@ -33,7 +42,7 @@ const LearningPlayer = () => {
         <div className="bg-red-50 text-red-600 p-6 rounded-xl border border-red-200 max-w-md text-center">
           <h2 className="text-xl font-bold mb-2">Error loading course</h2>
           <p>{error}</p>
-          <button 
+          <button
             onClick={() => navigate('/dashboard')}
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
@@ -45,39 +54,58 @@ const LearningPlayer = () => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-gray-50">
-      
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
-        
-        {/* Top Navbar specifically for player */}
-        <div className="h-16 bg-gray-900 flex items-center px-6 flex-shrink-0 sticky top-0 z-20">
-          <button 
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center text-gray-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={20} className="mr-2" />
-            <span className="font-medium hidden sm:inline">Back to Dashboard</span>
-          </button>
-          
-          <div className="ml-auto text-white font-medium truncate px-4">
-            {currentLesson ? currentLesson.title : 'Loading...'}
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="h-16 bg-gray-900 flex items-center px-6 sticky top-0 z-30">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center text-gray-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft size={20} className="mr-2" />
+          <span className="font-medium hidden sm:inline">Back to Dashboard</span>
+        </button>
 
-        {/* Player & Content Container */}
-        <div className="flex-1 p-4 lg:p-8 max-w-6xl mx-auto w-full">
-          <VideoPlayer 
-            url={currentLesson?.video_url} 
-            lessonId={currentLesson?.id} 
-          />
-          <LessonContent />
+        <div className="ml-auto text-white font-medium truncate px-4">
+          {currentLesson ? currentLesson.title : 'Loading...'}
         </div>
       </div>
 
-      {/* Curriculum Sidebar */}
-      <LessonSidebar />
-      
+      <div className="mx-auto w-full max-w-7xl px-4 py-6 lg:px-8">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-6 items-start">
+          <div className="space-y-6">
+            <VideoPlayer
+              url={currentLesson?.video_url}
+              lessonId={currentLesson?.id}
+            />
+            <LessonContent />
+
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => previousLessonId && selectLesson(previousLessonId)}
+                disabled={!previousLessonId}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft size={16} />
+                Previous lesson
+              </button>
+
+              <button
+                type="button"
+                onClick={() => nextLessonId && selectLesson(nextLessonId)}
+                disabled={!nextLessonId}
+                className="inline-flex items-center gap-2 rounded-lg border border-primary-600 bg-primary-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next lesson
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
+
+          <div className="xl:sticky xl:top-20">
+            <LessonSidebar />
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

@@ -64,6 +64,25 @@ class ForumController extends Controller
         return $this->comment($request, $topic);
     }
 
+    public function update(Request $request, ForumTopic $topic)
+    {
+        $user = $request->user();
+        $isAdmin = $user->hasRole('admin') || $user->role === 'admin';
+
+        if ($topic->user_id !== $user->id && ! $isAdmin) {
+            abort(403, 'Vous ne pouvez pas modifier ce sujet.');
+        }
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'body' => 'required|string',
+        ]);
+
+        $topic->update($validated);
+
+        return response()->json($topic->load('author'));
+    }
+
     public function destroy(Request $request, ForumTopic $topic)
     {
         $user = $request->user();

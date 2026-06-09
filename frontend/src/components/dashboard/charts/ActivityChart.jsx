@@ -19,7 +19,7 @@ const ActivityChart = ({ data, title = "Platform Activity" }) => {
       
       <div style={{ width: '100%', minHeight: 300 }}>
         {isMounted ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={300}>
             <BarChart
               data={data}
               margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

@@ -14,8 +14,8 @@ export const lessonService = {
   },
 
   // Mark a lesson as complete
-  completeLesson: async (courseId, lessonId) => {
-    const response = await api.post(`/courses/${courseId}/lessons/${lessonId}/complete`);
+  completeLesson: async (lessonId) => {
+    const response = await api.patch(`/lessons/${lessonId}/complete`);
     return response.data;
   },
 

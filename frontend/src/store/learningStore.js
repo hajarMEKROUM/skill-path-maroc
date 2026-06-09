@@ -14,17 +14,20 @@ const useLearningStore = create((set, get) => ({
     set({ courseId, isLoading: true, error: null });
     try {
       const data = await lessonService.getCourseLessons(courseId);
-      
-      // Assume API returns { lessons: [], completed_ids: [] }
+      const lessons = Array.isArray(data?.lessons)
+        ? data.lessons
+        : Array.isArray(data)
+          ? data
+          : [];
+
       set({ 
-        lessons: data.lessons || data, 
+        lessons, 
         completedLessonIds: data.completed_ids || [],
         isLoading: false 
       });
 
-      // Auto-select first lesson if none selected
-      if (data.length > 0) {
-        get().selectLesson(data[0].id);
+      if (lessons.length > 0) {
+        get().selectLesson(lessons[0].id);
       }
     } catch (error) {
       set({ error: error.message, isLoading: false });
@@ -43,11 +46,11 @@ const useLearningStore = create((set, get) => ({
   },
 
   markLessonComplete: async (lessonId) => {
-    const { courseId, completedLessonIds } = get();
+    const { completedLessonIds } = get();
     if (completedLessonIds.includes(lessonId)) return; // Already complete
 
     try {
-      await lessonService.completeLesson(courseId, lessonId);
+      await lessonService.completeLesson(lessonId);
       set((state) => ({
         completedLessonIds: [...state.completedLessonIds, lessonId]
       }));
@@ -63,6 +66,17 @@ const useLearningStore = create((set, get) => ({
     const currentIndex = lessons.findIndex(l => l.id === currentLesson.id);
     if (currentIndex !== -1 && currentIndex < lessons.length - 1) {
       return lessons[currentIndex + 1].id;
+    }
+    return null;
+  },
+
+  getPreviousLessonId: () => {
+    const { lessons, currentLesson } = get();
+    if (!currentLesson || !lessons.length) return null;
+
+    const currentIndex = lessons.findIndex((l) => l.id === currentLesson.id);
+    if (currentIndex > 0) {
+      return lessons[currentIndex - 1].id;
     }
     return null;
   }

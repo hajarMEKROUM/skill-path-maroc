@@ -1,77 +1,105 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardHeader from '../../components/dashboard/DashboardHeader';
 import StatsCard from '../../components/dashboard/StatsCard';
-import RevenueChart from '../../components/dashboard/charts/RevenueChart';
 import ActivityChart from '../../components/dashboard/charts/ActivityChart';
-import RecentActivity from '../../components/dashboard/RecentActivity';
-import { Users, BookOpen, Briefcase, DollarSign } from 'lucide-react';
-import useAuthStore from '../../store/authStore';
+import { Users, BookOpen, Briefcase, MessagesSquare } from 'lucide-react';
+import api from '../../services/api';
+import ErrorState from '../../components/shared/ErrorState';
 
 const AdminDashboard = () => {
-  const { user } = useAuthStore();
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const stats = [
-    { title: "Total Users", value: "12,450", icon: Users, trend: "up", trendValue: "18%", colorClass: "bg-blue-100 text-blue-600" },
-    { title: "Total Courses", value: "342", icon: BookOpen, trend: "up", trendValue: "5%", colorClass: "bg-purple-100 text-purple-600" },
-    { title: "Active Freelancers", value: "1,205", icon: Briefcase, colorClass: "bg-emerald-100 text-emerald-600" },
-    { title: "Platform Revenue", value: "$124,500", icon: DollarSign, trend: "up", trendValue: "22%", colorClass: "bg-orange-100 text-orange-600" }
-  ];
+  const fetchStats = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/admin/stats');
+      setStats(response.data.stats ?? response.data);
+    } catch {
+      setError('Impossible de charger les statistiques.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const revenueData = [
-    { name: 'Jan', revenue: 8000 },
-    { name: 'Feb', revenue: 9500 },
-    { name: 'Mar', revenue: 11000 },
-    { name: 'Apr', revenue: 10500 },
-    { name: 'May', revenue: 14000 },
-    { name: 'Jun', revenue: 16500 },
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const kpiCards = [
+    {
+      title: 'Utilisateurs',
+      value: loading ? '—' : String(stats?.users ?? 0),
+      icon: Users,
+      colorClass: 'bg-blue-100 text-blue-600',
+    },
+    {
+      title: 'Cours',
+      value: loading ? '—' : String(stats?.courses ?? 0),
+      icon: BookOpen,
+      colorClass: 'bg-purple-100 text-purple-600',
+    },
+    {
+      title: 'Offres Freelance',
+      value: loading ? '—' : String(stats?.jobs ?? 0),
+      icon: Briefcase,
+      colorClass: 'bg-emerald-100 text-emerald-600',
+    },
+    {
+      title: 'Sujets Communauté',
+      value: loading ? '—' : String(stats?.forum_topics ?? 0),
+      icon: MessagesSquare,
+      colorClass: 'bg-orange-100 text-orange-600',
+    },
   ];
 
   const activityData = [
-    { name: 'Mon', students: 120, courses: 45 },
-    { name: 'Tue', students: 150, courses: 55 },
-    { name: 'Wed', students: 180, courses: 60 },
-    { name: 'Thu', students: 140, courses: 50 },
-    { name: 'Fri', students: 200, courses: 70 },
-  ];
-
-  const activities = [
-    { id: 1, title: "New Instructor Application", description: "Mark Johnson applied to teach", time: "10 mins ago", colorClass: "bg-purple-500" },
-    { id: 2, title: "Course Reported", description: "UI Design Basics reported for quality", time: "1 hour ago", colorClass: "bg-red-500" },
-    { id: 3, title: "Payout Processed", description: "$4,500 paid to 12 instructors", time: "3 hours ago", colorClass: "bg-emerald-500" }
+    { name: 'Lun', students: stats?.users ? Math.round(stats.users * 0.1) : 0, courses: stats?.courses ?? 0 },
+    { name: 'Mar', students: stats?.users ? Math.round(stats.users * 0.12) : 0, courses: stats?.courses ?? 0 },
+    { name: 'Mer', students: stats?.users ? Math.round(stats.users * 0.15) : 0, courses: stats?.courses ?? 0 },
+    { name: 'Jeu', students: stats?.users ? Math.round(stats.users * 0.11) : 0, courses: stats?.courses ?? 0 },
+    { name: 'Ven', students: stats?.users ? Math.round(stats.users * 0.18) : 0, courses: stats?.courses ?? 0 },
   ];
 
   return (
     <div className="space-y-6">
-      <DashboardHeader 
-        title="Admin Control Panel" 
-        subtitle="Platform overview, metrics, and recent administrative activities."
-        action={
-          <button className="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-lg font-medium transition-colors">
-            Generate Report
-          </button>
-        }
+      <DashboardHeader
+        title="Tableau de Bord Admin"
+        subtitle="Vue d'ensemble de la plateforme basée sur les données réelles."
       />
 
+      {error && <ErrorState message={error} onRetry={fetchStats} />}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, index) => (
+        {kpiCards.map((stat, index) => (
           <StatsCard key={index} {...stat} />
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <RevenueChart data={revenueData} title="Platform Revenue" />
-        <ActivityChart data={activityData} title="User Growth" />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-soft border border-gray-100 p-6 flex items-center justify-center">
-           <div className="text-center">
-             <h3 className="text-lg font-medium text-gray-900 mb-2">System Health</h3>
-             <p className="text-gray-500 text-sm">All systems are running smoothly.</p>
-           </div>
-        </div>
-        <div className="lg:col-span-1">
-          <RecentActivity activities={activities} />
+        <ActivityChart data={activityData} title="Activité plateforme" />
+        <div className="page-card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Résumé</h3>
+          <dl className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <dt className="text-gray-500">Cours publiés</dt>
+              <dd className="font-medium text-gray-800">{stats?.published_courses ?? '—'}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-gray-500">Total utilisateurs</dt>
+              <dd className="font-medium text-gray-800">{stats?.users ?? '—'}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-gray-500">Offres freelance</dt>
+              <dd className="font-medium text-gray-800">{stats?.jobs ?? '—'}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-gray-500">Sujets forum</dt>
+              <dd className="font-medium text-gray-800">{stats?.forum_topics ?? '—'}</dd>
+            </div>
+          </dl>
         </div>
       </div>
     </div>

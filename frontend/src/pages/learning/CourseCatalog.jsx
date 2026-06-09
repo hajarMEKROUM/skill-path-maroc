@@ -1,34 +1,51 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter } from 'lucide-react';
-import useCoursesStore from '../../store/coursesStore';
+import { useCourses } from '../../hooks/useCourses';
 import CourseCard from '../../components/learning/CourseCard';
+import SkeletonCard from '../../components/shared/SkeletonCard';
+import EmptyState from '../../components/shared/EmptyState';
+import ErrorState from '../../components/shared/ErrorState';
 
 const CourseCatalog = () => {
-  const { courses, isLoading, fetchCourses, filters, setFilters } = useCoursesStore();
+  const [searchInput, setSearchInput] = useState('');
+  const [filters, setFilters] = useState({ search: '', level: '' });
+  const { data: courses, loading, error, refetch } = useCourses(filters);
 
   useEffect(() => {
-    fetchCourses();
-  }, [fetchCourses]);
-
-  const handleSearch = (e) => {
-    setFilters({ search: e.target.value });
-  };
+    const timer = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, search: searchInput }));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const handleLevelFilter = (e) => {
-    setFilters({ level: e.target.value });
+    setFilters((prev) => ({ ...prev, level: e.target.value }));
   };
 
+  const rawList = Array.isArray(courses?.data) ? courses.data : (Array.isArray(courses) ? courses : []);
+  const courseList = rawList.filter((course) => {
+    if (filters.search) {
+      const q = filters.search.toLowerCase();
+      const matchTitle = course.title?.toLowerCase().includes(q);
+      const matchDesc = course.description?.toLowerCase().includes(q);
+      const matchInstructor = course.instructor?.name?.toLowerCase().includes(q);
+      if (!matchTitle && !matchDesc && !matchInstructor) return false;
+    }
+    if (filters.level && course.level !== filters.level) return false;
+    return true;
+  });
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12 animate-fade-in">
       
       {/* Header & Search */}
       <div className="mb-10 text-center">
         <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight sm:text-5xl mb-4">
-          Master new skills, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-secondary-500">accelerate your career.</span>
+          Maîtrisez de nouvelles compétences, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-secondary-500">accélérez votre carrière.</span>
         </h1>
         <p className="text-xl text-gray-500 max-w-2xl mx-auto">
-          Explore our extensive catalog of courses designed by industry experts.
+          Explorez notre vaste catalogue de formations conçues par des experts de l'industrie.
         </p>
       </div>
 
@@ -41,43 +58,40 @@ const CourseCatalog = () => {
           <input
             type="text"
             className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-xl leading-5 bg-gray-50 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm transition-colors"
-            placeholder="Search for courses, skills, or instructors..."
-            value={filters.search}
-            onChange={handleSearch}
+            placeholder="Rechercher des formations, compétences, ou instructeurs..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
           />
         </div>
 
         <div className="flex items-center space-x-4 w-full sm:w-auto">
           <div className="flex items-center space-x-2 text-gray-500">
             <Filter size={20} />
-            <span className="text-sm font-medium">Filters:</span>
+            <span className="text-sm font-medium">Filtres :</span>
           </div>
           <select 
             className="block w-full pl-3 pr-10 py-2.5 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-xl bg-gray-50 border cursor-pointer"
             value={filters.level}
             onChange={handleLevelFilter}
           >
-            <option value="">All Levels</option>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
+            <option value="">Tous les niveaux</option>
+            <option value="beginner">Débutant</option>
+            <option value="intermediate">Intermédiaire</option>
             <option value="expert">Expert</option>
           </select>
         </div>
       </div>
 
       {/* Courses Grid */}
-      {isLoading ? (
+      {error ? (
+        <ErrorState message={error} onRetry={refetch} />
+      ) : loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
-            <div key={i} className="animate-pulse bg-white rounded-2xl h-80 border border-gray-100 shadow-sm p-4 flex flex-col">
-              <div className="bg-gray-200 h-40 rounded-xl mb-4"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="mt-auto h-8 bg-gray-200 rounded w-full"></div>
-            </div>
+            <SkeletonCard key={i} />
           ))}
         </div>
-      ) : courses.length > 0 ? (
+      ) : courseList.length > 0 ? (
         <motion.div 
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
           initial="hidden"
@@ -90,7 +104,7 @@ const CourseCatalog = () => {
             }
           }}
         >
-          {courses.map(course => (
+          {courseList.map(course => (
             <motion.div 
               key={course.id}
               variants={{
@@ -103,13 +117,10 @@ const CourseCatalog = () => {
           ))}
         </motion.div>
       ) : (
-        <div className="text-center py-20">
-          <div className="mx-auto w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-            <Search className="w-10 h-10 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-900">No courses found</h3>
-          <p className="mt-1 text-gray-500">Try adjusting your search or filters to find what you're looking for.</p>
-        </div>
+        <EmptyState 
+          message="Aucune formation disponible pour le moment." 
+          icon={Search} 
+        />
       )}
     </div>
   );
