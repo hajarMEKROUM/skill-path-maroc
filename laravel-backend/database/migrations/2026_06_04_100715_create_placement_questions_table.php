@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('placement_questions', function (Blueprint $table) {
             $table->id();
-            $table->string('path_category'); // Web, Mobile, Data
+            $table->enum('path_category', ['Web', 'Mobile', 'Data']);
             $table->text('question_text');
-            $table->json('options'); // json array of options
+            $table->json('options');
             $table->string('correct_answer');
             $table->integer('points')->default(1);
             $table->timestamps();
