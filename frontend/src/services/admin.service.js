@@ -27,6 +27,26 @@ export const adminService = {
     return response.data;
   },
 
+  getJobs: async (params = {}) => {
+    const response = await api.get('/admin/jobs', { params });
+    return response.data;
+  },
+
+  getPendingJobs: async () => {
+    const response = await api.get('/admin/jobs/pending');
+    return response.data;
+  },
+
+  approveJob: async (jobId) => {
+    const response = await api.put(`/admin/jobs/${jobId}/approve`);
+    return response.data;
+  },
+
+  rejectJob: async (jobId) => {
+    const response = await api.put(`/admin/jobs/${jobId}/reject`);
+    return response.data;
+  },
+
   banUser: async (userId, reason) => {
     const response = await api.put(`/admin/user/${userId}/ban`, { reason });
     return response.data;

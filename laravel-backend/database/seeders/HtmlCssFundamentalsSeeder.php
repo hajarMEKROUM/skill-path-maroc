@@ -63,6 +63,8 @@ class HtmlCssFundamentalsSeeder extends Seeder
                     'lesson_id' => $lesson->id,
                     'title' => $exercise['title'],
                     'content' => $exercise['content'],
+                    'expected_answer' => $exercise['expected_answer'] ?? null,
+                    'hint' => $exercise['hint'] ?? null,
                     'sort_order' => $exerciseIndex + 1,
                 ]);
             }
@@ -123,6 +125,8 @@ HTML,
                 'exercises' => [[
                     'title' => 'Créer votre première page',
                     'content' => 'Écrivez un fichier HTML avec `<!DOCTYPE html>`, un `<title>` dans `<head>`, un `<h1>` **Bonjour Maroc** et un `<p>` avec une phrase sur vos objectifs.',
+                    'expected_answer' => 'bonjour maroc',
+                    'hint' => 'Utilisez les balises `<h1>` et `<p>` à l\'intérieur de `<body>`.',
                 ]],
                 'quiz' => [
                     'title' => 'Quiz — Introduction au HTML',
@@ -188,6 +192,8 @@ HTML,
                 'exercises' => [[
                     'title' => 'Mise en page sémantique',
                     'content' => 'Créez une page avec `<header>` (titre du site), `<nav>` (2 liens), `<main>` avec une `<section>`, et `<footer>` (copyright).',
+                    'expected_answer' => '<header>',
+                    'hint' => 'Commencez par `<!DOCTYPE html>` puis utilisez `<header>`, `<nav>`, `<main>` et `<footer>`.',
                 ]],
                 'quiz' => [
                     'title' => 'Quiz — Structure HTML',
@@ -231,6 +237,8 @@ HTML,
                 'exercises' => [[
                     'title' => 'Styliser une page',
                     'content' => 'Écrivez un fichier `styles.css` : fond `#f8fafc`, texte centré, tous les `h1` en bleu (`#2563eb`) avec `font-size: 2rem`. Liez-le à votre page HTML.',
+                    'expected_answer' => '#2563eb',
+                    'hint' => 'Utilisez `color: #2563eb` pour les titres et `text-align: center` pour centrer.',
                 ]],
                 'quiz' => [
                     'title' => 'Quiz — CSS de base',

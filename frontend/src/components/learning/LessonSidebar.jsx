@@ -3,18 +3,12 @@ import { CheckCircle2, Circle, PlayCircle, Video, FileText } from 'lucide-react'
 import useLearningStore from '../../store/learningStore';
 
 const LessonSidebar = () => {
-  const { lessons, currentLesson, completedLessonIds, selectLesson, courseTitle } =
-    useLearningStore();
-
-  const progressPercent =
-    lessons.length > 0
-      ? Math.round((completedLessonIds.length / lessons.length) * 100)
-      : 0;
+  const { lessons, currentLesson, courseTitle, courseProgress, selectLesson } = useLearningStore();
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-5 border-b border-slate-100">
-        <h3 className="font-bold text-slate-900 text-base leading-snug">
+    <div className="flex flex-col h-full min-h-[320px] lg:min-h-0">
+      <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+        <h3 className="font-bold text-slate-900 text-base leading-snug line-clamp-2">
           {courseTitle || 'Contenu du cours'}
         </h3>
         <p className="text-xs text-slate-500 mt-1">
@@ -23,26 +17,23 @@ const LessonSidebar = () => {
 
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="text-slate-600 font-medium">Progression</span>
-            <span className="font-bold text-primary-600">{progressPercent}%</span>
+            <span className="text-slate-600 font-medium">Progression globale</span>
+            <span className="font-bold text-primary-600">{courseProgress}%</span>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-2">
+          <div className="w-full bg-slate-200 rounded-full h-2.5">
             <div
-              className="bg-primary-600 h-2 rounded-full transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
+              className="bg-primary-600 h-2.5 rounded-full transition-all duration-500"
+              style={{ width: `${courseProgress}%` }}
             />
           </div>
-          <p className="text-xs text-slate-500 mt-1.5">
-            {completedLessonIds.length} / {lessons.length} terminée
-            {completedLessonIds.length > 1 ? 's' : ''}
-          </p>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-1">
         {lessons.map((lesson, index) => {
-          const isComplete = completedLessonIds.includes(lesson.id);
           const isActive = currentLesson?.id === lesson.id;
+          const progress = lesson.progress_percent ?? 0;
+          const isComplete = lesson.is_completed || progress >= 100;
 
           return (
             <button
@@ -51,8 +42,8 @@ const LessonSidebar = () => {
               onClick={() => selectLesson(lesson.id)}
               className={`w-full text-left px-3 py-3 rounded-lg transition-all flex items-start gap-3 ${
                 isActive
-                  ? 'bg-primary-50 border border-primary-200 shadow-sm'
-                  : 'hover:bg-slate-50 border border-transparent'
+                  ? 'bg-primary-50 border-l-4 border-l-primary-600 border border-primary-100 shadow-sm'
+                  : 'hover:bg-slate-50 border border-transparent border-l-4 border-l-transparent'
               }`}
             >
               <div className="mt-0.5 shrink-0">
@@ -85,9 +76,13 @@ const LessonSidebar = () => {
                       <span>Lecture</span>
                     </>
                   )}
-                  {lesson.duration_seconds > 0 && (
-                    <span>· {Math.floor(lesson.duration_seconds / 60)} min</span>
-                  )}
+                  <span>· {progress}%</span>
+                </div>
+                <div className="mt-1.5 w-full bg-slate-100 rounded-full h-1">
+                  <div
+                    className="bg-primary-500 h-1 rounded-full transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
                 </div>
               </div>
             </button>

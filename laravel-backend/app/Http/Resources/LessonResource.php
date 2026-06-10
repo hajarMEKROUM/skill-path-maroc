@@ -18,12 +18,17 @@ class LessonResource extends JsonResource
             'sort_order' => $this->sort_order,
             'is_preview' => (bool) $this->is_preview,
             'is_completed' => (bool) ($this->is_completed ?? false),
+            'progress_percent' => (int) ($this->progress_percent ?? 0),
+            'content_completed' => (bool) ($this->content_completed ?? false),
+            'quiz_score' => (int) ($this->quiz_score ?? 0),
+            'completed_exercise_ids' => $this->completed_exercise_ids ?? [],
             'exercises' => $this->relationLoaded('exercises')
                 ? $this->exercises->map(fn ($exercise) => [
                     'id' => $exercise->id,
                     'title' => $exercise->title,
                     'content' => $exercise->content,
                     'sort_order' => $exercise->sort_order,
+                    'is_completed' => in_array($exercise->id, $this->completed_exercise_ids ?? [], true),
                 ])->values()
                 : [],
             'quiz' => $this->relationLoaded('quiz') && $this->quiz
@@ -31,7 +36,10 @@ class LessonResource extends JsonResource
                     'id' => $this->quiz->id,
                     'title' => $this->quiz->title,
                     'passing_score' => $this->quiz->passing_score,
-                    'questions' => $this->quiz->questions ?? [],
+                    'questions' => collect($this->quiz->questions ?? [])->map(fn ($q) => [
+                        'question' => $q['question'] ?? $q['body'] ?? '',
+                        'options' => $q['options'] ?? [],
+                    ])->values(),
                 ]
                 : null,
         ];

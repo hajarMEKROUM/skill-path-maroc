@@ -10,7 +10,9 @@ const RecommendationsCard = ({ recommendation }) => {
         <div className="flex justify-between items-center">
           <span className="text-gray-600 font-medium">Niveau évalué :</span>
           <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
-            {recommendation.niveau || recommendation.level}
+            {recommendation.level_label ||
+              recommendation.niveau ||
+              recommendation.level}
           </span>
         </div>
         <div className="flex justify-between items-center">

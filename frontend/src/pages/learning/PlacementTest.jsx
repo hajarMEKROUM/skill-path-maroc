@@ -11,6 +11,7 @@ const PlacementTest = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [result, setResult] = useState(null);
+  const [recommendedCourses, setRecommendedCourses] = useState([]);
 
   useEffect(() => {
     const startTest = async () => {
@@ -69,12 +70,30 @@ const PlacementTest = () => {
       <div className="max-w-2xl mx-auto p-6 mt-10">
         <h2 className="text-2xl font-bold mb-6 text-center text-green-600">Test terminé !</h2>
         <RecommendationsCard recommendation={result.recommendation ?? result} />
+        {recommendedCourses.length > 0 && (
+          <div className="mt-6 bg-slate-50 rounded-xl p-5 border border-slate-200">
+            <h3 className="font-bold text-gray-900 mb-3">Cours recommandés pour vous</h3>
+            <ul className="space-y-2">
+              {recommendedCourses.map((course) => (
+                <li key={course.id}>
+                  <Link
+                    to={`/courses/${course.slug ?? course.id}`}
+                    className="text-primary-600 hover:underline font-medium"
+                  >
+                    {course.title}
+                  </Link>
+                  <span className="text-xs text-gray-500 ml-2">({course.level})</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             to="/courses"
             className="bg-primary-600 text-white px-6 py-2 rounded-lg text-center hover:bg-primary-700"
           >
-            Voir mes cours recommandés
+            Voir le catalogue
           </Link>
           <Link
             to="/dashboard/student"
@@ -137,6 +156,12 @@ const PlacementTest = () => {
         answers: formattedAnswers,
       });
       setResult(response.data);
+      try {
+        const recRes = await api.get('/recommendations');
+        setRecommendedCourses(recRes.data?.data ?? []);
+      } catch {
+        setRecommendedCourses([]);
+      }
     } catch (error) {
       console.error('Error submitting test', error);
       setLoadError(

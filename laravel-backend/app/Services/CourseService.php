@@ -13,15 +13,16 @@ class CourseService
 {
     public function __construct(
         protected CourseRepositoryInterface $courseRepository,
-        protected CertificateService $certificateService
+        protected CertificateService $certificateService,
+        protected LessonProgressService $lessonProgressService
     ) {
     }
 
     public function createCourse(array $data, $instructorId)
     {
         $data['instructor_id'] = $instructorId;
-        $data['slug'] = Str::slug($data['title']) . '-' . uniqid();
-        
+        $data['slug'] = Str::slug($data['title']).'-'.uniqid();
+
         return $this->courseRepository->create($data);
     }
 
@@ -40,6 +41,7 @@ class CourseService
         if (isset($data['title'])) {
             $data['slug'] = Str::slug($data['title']).'-'.$id;
         }
+
         return $this->courseRepository->update($id, $data);
     }
 
@@ -66,57 +68,42 @@ class CourseService
 
     public function getCourseLessons(Course $course, $user)
     {
-        $completed = $user
-            ? DB::table('lesson_progress')
-                ->where('user_id', $user->id)
-                ->where('is_completed', true)
-                ->pluck('lesson_id')
-                ->all()
-            : [];
-
-        return $course->lessons()
+        $lessons = $course->lessons()
             ->with(['exercises', 'quiz', 'module'])
             ->get()
             ->sortBy(fn ($lesson) => [
                 $lesson->module?->sort_order ?? 0,
                 $lesson->sort_order,
             ])
-            ->values()
-            ->each(function ($lesson) use ($completed) {
-                $lesson->setAttribute('is_completed', in_array($lesson->id, $completed, true));
-            });
+            ->values();
+
+        $this->lessonProgressService->attachProgressToLessons($lessons, $user);
+
+        return $lessons;
     }
 
     public function getLesson(Course $course, Lesson $lesson, $user)
     {
         abort_unless($lesson->course_id === $course->id, 404);
 
-        $isCompleted = $user
-            ? DB::table('lesson_progress')
-                ->where('user_id', $user->id)
-                ->where('lesson_id', $lesson->id)
-                ->where('is_completed', true)
-                ->exists()
-            : false;
-
         $lesson->load(['exercises', 'quiz', 'module']);
-        $lesson->setAttribute('is_completed', $isCompleted);
+        $this->lessonProgressService->attachProgressToLessons(collect([$lesson]), $user);
 
         return $lesson;
     }
 
-    public function markLessonComplete(Lesson $lesson, $user): ?\App\Models\Certificate
+    public function markLessonComplete(Lesson $lesson, $user): array
     {
-        DB::table('lesson_progress')->updateOrInsert(
-            ['user_id' => $user->id, 'lesson_id' => $lesson->id],
-            ['is_completed' => true, 'updated_at' => now(), 'created_at' => now()]
-        );
-
+        $progress = $this->lessonProgressService->markContentComplete($lesson, $user);
         $course = $lesson->course;
-
-        return $course
+        $certificate = $course
             ? $this->certificateService->issueIfCourseCompleted($course, $user)
             : null;
+
+        return [
+            'progress' => $progress,
+            'certificate' => $certificate,
+        ];
     }
 
     public function updateLessonProgress($lessonId, $user, $timeWatched)

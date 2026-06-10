@@ -14,37 +14,43 @@ class RecommendationController extends Controller
     {
         try {
             $user = $request->user();
-            
-            // 1. Récupérer le dernier test de placement de l'utilisateur
+
             $lastTest = PlacementTest::where('user_id', $user->id)
+                ->whereNotNull('completed_at')
                 ->latest()
                 ->first();
 
-            // 2. Filtrer les cours selon la catégorie du parcours (path_category)
-            if ($lastTest && !empty($lastTest->path_category)) {
-                $category = $lastTest->path_category;
+            $level = $lastTest?->level ?? 'beginner';
 
-                if ($category === 'Web') {
-                    $courses = Course::whereIn('level', ['beginner', 'intermediate'])->take(3)->get();
-                } elseif ($category === 'Mobile') {
-                    $courses = Course::where(function($query) {
-                        $query->where('title', 'LIKE', '%flutter%')
-                              ->orWhere('title', 'LIKE', '%mobile%');
-                    })->take(3)->get();
-                } elseif ($category === 'Data') {
-                    $courses = Course::where(function($query) {
-                        $query->where('title', 'LIKE', '%python%')
-                              ->orWhere('title', 'LIKE', '%data%');
-                    })->take(3)->get();
-                } else {
-                    $courses = Course::where('is_published', true)->take(3)->get();
-                }
+            $query = Course::query()->where('status', 'published');
+
+            if ($level === 'beginner') {
+                $query->where(function ($q) {
+                    $q->where('title', 'like', '%HTML%')
+                        ->orWhere('title', 'like', '%CSS%')
+                        ->orWhere('level', 'beginner');
+                });
+            } elseif ($level === 'intermediate') {
+                $query->where(function ($q) {
+                    $q->where('title', 'like', '%React%')
+                        ->orWhere('title', 'like', '%JavaScript%')
+                        ->orWhere('level', 'intermediate');
+                });
             } else {
-                // 4. Si aucun test, retourner les 3 premiers cours par défaut
-                $courses = Course::take(3)->get();
+                $query->where(function ($q) {
+                    $q->where('title', 'like', '%Laravel%')
+                        ->orWhere('title', 'like', '%Fullstack%')
+                        ->orWhere('level', 'expert')
+                        ->orWhere('level', 'intermediate');
+                });
             }
 
-            // 3. Formatage de la réponse
+            $courses = $query->take(3)->get();
+
+            if ($courses->isEmpty()) {
+                $courses = Course::where('status', 'published')->take(3)->get();
+            }
+
             $formattedCourses = $courses->map(function ($course) {
                 return [
                     'id' => $course->id,
@@ -56,10 +62,12 @@ class RecommendationController extends Controller
                 ];
             });
 
-            return response()->json(['data' => $formattedCourses]);
+            return response()->json([
+                'data' => $formattedCourses,
+                'level' => $level,
+            ]);
 
         } catch (Exception $e) {
-            // 5. Retourner un tableau vide en cas d'erreur
             return response()->json(['data' => []]);
         }
     }

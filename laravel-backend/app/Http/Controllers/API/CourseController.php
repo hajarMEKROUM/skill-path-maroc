@@ -5,8 +5,10 @@ namespace App\Http\Controllers\API;
 use App\Http\Controllers\Controller;
 use App\Models\Certificate;
 use App\Models\Course;
+use App\Models\Exercise;
 use App\Models\Lesson;
 use App\Services\CourseService;
+use App\Services\LessonProgressService;
 use App\Http\Requests\Course\StoreCourseRequest;
 use App\Http\Requests\Course\UpdateCourseRequest;
 use App\Http\Resources\CourseResource;
@@ -20,9 +22,12 @@ class CourseController extends Controller
 
     protected $courseService;
 
-    public function __construct(CourseService $courseService)
+    protected $lessonProgressService;
+
+    public function __construct(CourseService $courseService, LessonProgressService $lessonProgressService)
     {
         $this->courseService = $courseService;
+        $this->lessonProgressService = $lessonProgressService;
     }
 
     public function index(Request $request)
@@ -192,14 +197,48 @@ class CourseController extends Controller
         return response()->json($this->formatCertificate($certificate));
     }
 
+    public function submitExercise(Request $request, Exercise $exercise)
+    {
+        $validated = $request->validate([
+            'answer' => 'required|string|max:2000',
+        ]);
+
+        $result = $this->lessonProgressService->submitExercise(
+            $exercise,
+            $request->user(),
+            $validated['answer']
+        );
+
+        return response()->json($result);
+    }
+
+    public function validateQuizAnswer(Request $request, Lesson $lesson)
+    {
+        $validated = $request->validate([
+            'question_index' => 'required|integer|min:0',
+            'selected' => 'required|string|max:500',
+        ]);
+
+        $result = $this->lessonProgressService->validateQuizAnswer(
+            $lesson,
+            $request->user(),
+            $validated['question_index'],
+            $validated['selected']
+        );
+
+        return response()->json($result);
+    }
+
     protected function completeLessonForUser(Request $request, Lesson $lesson)
     {
         abort_unless($lesson->course_id, 404);
 
-        $certificate = $this->courseService->markLessonComplete($lesson, $request->user());
+        $result = $this->courseService->markLessonComplete($lesson, $request->user());
+        $certificate = $result['certificate'];
 
         return response()->json([
-            'message' => 'Leçon marquée comme terminée',
+            'message' => 'Contenu de la leçon marqué comme lu',
+            'progress' => $result['progress'],
             'certificate' => $this->formatCertificate($certificate),
             'course_completed' => (bool) $certificate,
         ]);

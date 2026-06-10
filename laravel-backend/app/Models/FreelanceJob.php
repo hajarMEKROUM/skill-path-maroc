@@ -17,6 +17,7 @@ class FreelanceJob extends Model
         'budget_min',
         'budget_max',
         'status',
+        'approval_status',
         'deadline'
     ];
 

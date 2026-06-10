@@ -54,6 +54,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/courses/{course}/lessons/{lesson}', [CourseController::class, 'lesson']);
         Route::post('/courses/{course}/lessons/{lesson}/complete', [CourseController::class, 'completeLesson']);
         Route::patch('/lessons/{lesson}/complete', [CourseController::class, 'completeLessonByLesson']);
+        Route::post('/lessons/{lesson}/quiz/answer', [CourseController::class, 'validateQuizAnswer']);
+        Route::post('/exercises/{exercise}/submit', [CourseController::class, 'submitExercise']);
         Route::post('/lesson-progress', [CourseController::class, 'updateProgress']);
         Route::get('/courses/{course}/certificate', [CourseController::class, 'certificate']);
 
@@ -114,6 +116,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('/user/{user}', [AdminController::class, 'destroyUser']);
             Route::put('/user/{user}/role', [AdminController::class, 'updateRole']);
             Route::apiResource('courses', AdminCourseController::class);
+            Route::get('/jobs', [AdminController::class, 'listJobs']);
             Route::post('/jobs', [AdminController::class, 'storeJob']);
             Route::put('/user/{user}/ban', [AdminController::class, 'ban']);
             Route::put('/user/{user}/verify', [AdminController::class, 'verify']);

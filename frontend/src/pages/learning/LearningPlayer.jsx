@@ -16,6 +16,7 @@ const LearningPlayer = () => {
     courseTitle,
     certificate,
     courseCompleted,
+    courseProgress,
     completedLessonIds,
     isLoading,
     error,
@@ -75,6 +76,9 @@ const LearningPlayer = () => {
           <p className="text-sm font-medium text-white truncate">
             {currentLesson?.title ?? 'Chargement...'}
           </p>
+        </div>
+        <div className="hidden sm:block text-xs font-semibold text-primary-400 shrink-0">
+          {courseProgress}%
         </div>
       </header>
 

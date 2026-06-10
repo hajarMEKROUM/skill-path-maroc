@@ -26,6 +26,19 @@ export const lessonService = {
     return response.data;
   },
 
+  submitExercise: async (exerciseId, answer) => {
+    const response = await api.post(`/exercises/${exerciseId}/submit`, { answer });
+    return response.data;
+  },
+
+  submitQuizAnswer: async (lessonId, questionIndex, selected) => {
+    const response = await api.post(`/lessons/${lessonId}/quiz/answer`, {
+      question_index: questionIndex,
+      selected,
+    });
+    return response.data;
+  },
+
   saveVideoProgress: async (lessonId, timeInSeconds) => {
     const response = await api.post('/lesson-progress', {
       lesson_id: lessonId,

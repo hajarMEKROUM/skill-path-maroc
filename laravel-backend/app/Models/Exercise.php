@@ -13,6 +13,8 @@ class Exercise extends Model
         'lesson_id',
         'title',
         'content',
+        'expected_answer',
+        'hint',
         'sort_order',
     ];
 

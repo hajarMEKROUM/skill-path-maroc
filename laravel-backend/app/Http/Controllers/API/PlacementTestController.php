@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Models\AiRecommendation;
 use App\Models\PlacementAnswer;
 use App\Models\PlacementQuestion;
 use App\Models\PlacementTest;
@@ -45,12 +46,6 @@ class PlacementTestController extends Controller
             abort(403);
         }
 
-        $categoryScores = [
-            'Web' => 0,
-            'Mobile' => 0,
-            'Data' => 0,
-        ];
-
         $totalScore = 0;
         $maxScore = 0;
 
@@ -68,10 +63,6 @@ class PlacementTestController extends Controller
             $maxScore += $question->points;
 
             if ($isCorrect) {
-                $category = $question->path_category;
-                if (isset($categoryScores[$category])) {
-                    $categoryScores[$category] += $question->points;
-                }
                 $totalScore += $question->points;
             }
         }
@@ -86,37 +77,53 @@ class PlacementTestController extends Controller
             $level = 'beginner';
         }
 
-        $pathCategory = 'Web';
-        $bestCategoryScore = -1;
-        foreach ($categoryScores as $category => $points) {
-            if ($points > $bestCategoryScore) {
-                $bestCategoryScore = $points;
-                $pathCategory = $category;
-            }
-        }
-
         $test->update([
             'score' => (int) round($scorePercent),
-            'path_category' => $pathCategory,
+            'path_category' => 'Web',
             'level' => $level,
             'completed_at' => now(),
         ]);
 
-        $langageRecommande = match ($pathCategory) {
-            'Web' => 'JavaScript',
-            'Mobile' => 'Flutter',
-            'Data' => 'Python',
-            default => 'JavaScript',
+        $langageRecommande = match ($level) {
+            'beginner' => 'HTML / CSS',
+            'intermediate' => 'JavaScript / React',
+            'advanced' => 'Laravel / Fullstack',
+            default => 'HTML / CSS',
         };
+
+        $parcoursRecommande = match ($level) {
+            'beginner' => 'Fondamentaux Web',
+            'intermediate' => 'Développement Frontend',
+            'advanced' => 'Développement Backend',
+            default => 'Fondamentaux Web',
+        };
+
+        AiRecommendation::updateOrCreate(
+            ['user_id' => $request->user()->id, 'placement_test_id' => $test->id],
+            [
+                'niveau' => $level,
+                'langage_recommande' => $langageRecommande,
+                'parcours_recommande' => $parcoursRecommande,
+                'score' => (int) round($scorePercent),
+            ]
+        );
 
         return response()->json([
             'score' => $scorePercent,
             'level' => $level,
-            'recommended_path' => $pathCategory,
+            'level_label' => $this->levelLabel($level),
+            'recommended_path' => $parcoursRecommande,
             'message' => 'Test soumis avec succès. Votre parcours a été personnalisé.',
             'niveau' => $level,
-            'parcours_recommande' => $pathCategory,
+            'parcours_recommande' => $parcoursRecommande,
             'langage_recommande' => $langageRecommande,
+            'recommendation' => [
+                'score' => $scorePercent,
+                'level' => $level,
+                'level_label' => $this->levelLabel($level),
+                'langage_recommande' => $langageRecommande,
+                'parcours_recommande' => $parcoursRecommande,
+            ],
         ]);
     }
 
@@ -126,6 +133,7 @@ class PlacementTestController extends Controller
             $user = $request->user();
 
             $lastTest = PlacementTest::where('user_id', $user->id)
+                ->whereNotNull('completed_at')
                 ->latest()
                 ->first();
 
@@ -136,13 +144,19 @@ class PlacementTestController extends Controller
                 ], 200);
             }
 
+            $aiRec = AiRecommendation::where('user_id', $user->id)
+                ->where('placement_test_id', $lastTest->id)
+                ->first();
+
             return response()->json([
                 'data' => [
                     'score' => $lastTest->score,
                     'level' => $lastTest->level,
-                    'recommended_path' => $lastTest->path_category,
+                    'level_label' => $this->levelLabel($lastTest->level),
+                    'recommended_path' => $aiRec?->parcours_recommande ?? $lastTest->path_category,
                     'niveau' => $lastTest->level,
-                    'parcours_recommande' => $lastTest->path_category,
+                    'parcours_recommande' => $aiRec?->parcours_recommande,
+                    'langage_recommande' => $aiRec?->langage_recommande,
                 ],
             ]);
         } catch (Exception $e) {
@@ -150,5 +164,15 @@ class PlacementTestController extends Controller
 
             return response()->json(['data' => null], 200);
         }
+    }
+
+    protected function levelLabel(string $level): string
+    {
+        return match ($level) {
+            'beginner' => 'Débutant',
+            'intermediate' => 'Intermédiaire',
+            'advanced' => 'Avancé',
+            default => ucfirst($level),
+        };
     }
 }

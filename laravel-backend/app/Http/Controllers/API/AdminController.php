@@ -246,6 +246,7 @@ class AdminController extends Controller
         $job = FreelanceJob::create(array_merge($validated, [
             'client_id' => $clientId,
             'status' => $validated['status'] ?? 'open',
+            'approval_status' => 'approved',
         ]));
 
         return response()->json([
@@ -254,10 +255,21 @@ class AdminController extends Controller
         ], 201);
     }
 
+    public function listJobs(Request $request)
+    {
+        $query = FreelanceJob::with('client')->latest();
+
+        if ($request->filled('approval_status')) {
+            $query->where('approval_status', $request->input('approval_status'));
+        }
+
+        return response()->json($query->paginate(15));
+    }
+
     public function pendingJobs()
     {
         $jobs = FreelanceJob::with('client')
-            ->where('status', 'open')
+            ->where('approval_status', 'pending')
             ->latest()
             ->paginate(15);
 
@@ -266,7 +278,10 @@ class AdminController extends Controller
 
     public function approveJob(FreelanceJob $job)
     {
-        $job->update(['status' => 'open']);
+        $job->update([
+            'approval_status' => 'approved',
+            'status' => 'open',
+        ]);
 
         return response()->json([
             'message' => 'Offre approuvée.',
@@ -276,7 +291,10 @@ class AdminController extends Controller
 
     public function rejectJob(FreelanceJob $job)
     {
-        $job->update(['status' => 'cancelled']);
+        $job->update([
+            'approval_status' => 'rejected',
+            'status' => 'cancelled',
+        ]);
 
         return response()->json([
             'message' => 'Offre rejetée.',

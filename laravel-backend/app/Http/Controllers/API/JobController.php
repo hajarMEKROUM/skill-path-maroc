@@ -14,6 +14,7 @@ class JobController extends Controller
     {
         $query = FreelanceJob::query()
             ->where('status', 'open')
+            ->where('approval_status', 'approved')
             ->with('client');
 
         if ($request->filled('search')) {
@@ -78,13 +79,25 @@ class JobController extends Controller
             'status' => 'nullable|in:open,in_progress,completed,cancelled',
         ]);
 
+        $isAdmin = RoleNormalizer::isAdmin($request->user()->role ?? null);
+
+        if (! $isAdmin) {
+            unset($validated['status']);
+        }
+
         $job = FreelanceJob::create(array_merge(
             $validated,
-            ['client_id' => $request->user()->id]
+            [
+                'client_id' => $request->user()->id,
+                'status' => 'open',
+                'approval_status' => $isAdmin ? 'approved' : 'pending',
+            ]
         ));
 
         return response()->json([
-            'message' => 'Job posted successfully',
+            'message' => $isAdmin
+                ? 'Offre publiée avec succès.'
+                : 'Offre soumise. En attente de validation par un administrateur.',
             'job' => $job,
         ], 201);
     }

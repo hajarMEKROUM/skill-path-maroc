@@ -1,13 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import { adminService } from '../../services/admin.service';
-import { Pencil, Trash2, Plus, X } from 'lucide-react';
+import { Pencil, Trash2, Plus, X, Check, Ban } from 'lucide-react';
 
 const emptyForm = {
   title: '',
   description: '',
   budget: '',
   status: 'open',
+};
+
+const statusBadge = {
+  pending: 'bg-amber-100 text-amber-800',
+  approved: 'bg-emerald-100 text-emerald-800',
+  rejected: 'bg-red-100 text-red-800',
+};
+
+const statusLabel = {
+  pending: 'En attente',
+  approved: 'Approuvée',
+  rejected: 'Rejetée',
 };
 
 const AdminMarketplace = () => {
@@ -18,13 +30,20 @@ const AdminMarketplace = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [tab, setTab] = useState('all');
 
   const fetchJobs = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/admin/freelance');
-      setJobs(response.data);
+      const response =
+        tab === 'pending'
+          ? await adminService.getPendingJobs()
+          : await adminService.getJobs(
+              tab !== 'all' ? { approval_status: tab } : {}
+            );
+      const data = response.data ?? response;
+      setJobs(Array.isArray(data) ? data : data.data ?? []);
     } catch (err) {
       setError(err.response?.data?.message || 'Impossible de charger les offres.');
       setJobs([]);
@@ -35,7 +54,7 @@ const AdminMarketplace = () => {
 
   useEffect(() => {
     fetchJobs();
-  }, []);
+  }, [tab]);
 
   const openCreate = () => {
     setEditingJob(null);
@@ -59,7 +78,6 @@ const AdminMarketplace = () => {
     e.preventDefault();
     setActionLoading(editingJob ? editingJob.id : 'create');
     setError(null);
-
     try {
       const payload = {
         title: form.title,
@@ -68,19 +86,17 @@ const AdminMarketplace = () => {
         budget_max: form.budget,
         status: form.status,
       };
-
       if (editingJob) {
         await api.put(`/jobs/${editingJob.id}`, payload);
       } else {
         await adminService.createJob(payload);
       }
-
       setShowForm(false);
       setEditingJob(null);
       setForm(emptyForm);
       await fetchJobs();
     } catch (err) {
-      setError(err.response?.data?.message || 'Erreur lors de la sauvegarde de l\'offre.');
+      setError(err.response?.data?.message || "Erreur lors de la sauvegarde de l'offre.");
     } finally {
       setActionLoading(null);
     }
@@ -99,13 +115,44 @@ const AdminMarketplace = () => {
     }
   };
 
+  const handleApprove = async (jobId) => {
+    setActionLoading(jobId);
+    try {
+      await adminService.approveJob(jobId);
+      await fetchJobs();
+    } catch (err) {
+      setError(err.response?.data?.message || "Erreur lors de l'approbation.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (jobId) => {
+    setActionLoading(jobId);
+    try {
+      await adminService.rejectJob(jobId);
+      await fetchJobs();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Erreur lors du rejet.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const tabs = [
+    { id: 'all', label: 'Toutes' },
+    { id: 'pending', label: 'En attente' },
+    { id: 'approved', label: 'Approuvées' },
+    { id: 'rejected', label: 'Rejetées' },
+  ];
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion Freelance</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Modération Freelance</h1>
           <p className="text-gray-500 text-sm mt-1">
-            {jobs.length} offre{jobs.length !== 1 ? 's' : ''} affichée{jobs.length !== 1 ? 's' : ''}.
+            Approuvez ou rejetez les offres avant publication.
           </p>
         </div>
         <button
@@ -118,11 +165,28 @@ const AdminMarketplace = () => {
         </button>
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              tab === t.id
+                ? 'bg-primary-600 text-white'
+                : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-soft p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">
-              {editingJob ? 'Modifier l’offre' : 'Ajouter une offre'}
+              {editingJob ? "Modifier l'offre" : 'Ajouter une offre'}
             </h2>
             <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600">
               <X size={20} />
@@ -153,22 +217,12 @@ const AdminMarketplace = () => {
             onChange={(e) => setForm({ ...form, budget: e.target.value })}
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
           />
-          <select
-            value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="open">Open</option>
-            <option value="in_progress">In progress</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
           <button
             type="submit"
             disabled={actionLoading === 'create' || actionLoading === editingJob?.id}
             className="py-2 px-6 bg-emerald-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
           >
-            {editingJob ? 'Enregistrer les modifications' : 'Créer l’offre'}
+            {editingJob ? 'Enregistrer' : "Créer l'offre"}
           </button>
         </form>
       )}
@@ -179,76 +233,91 @@ const AdminMarketplace = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-soft overflow-hidden">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Titre</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Auteur</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Localisation</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Type de contrat</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Description</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Client</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Statut</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Budget</th>
                 <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {loading
-                ? [...Array(5)].map((_, index) => (
-                    <tr key={index} className="animate-pulse">
-                      <td colSpan={5} className="px-6 py-4">
-                        <div className="h-4 bg-gray-200 rounded" />
-                      </td>
-                    </tr>
-                  ))
-                : jobs.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      Aucune offre trouvée.
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    Chargement...
+                  </td>
+                </tr>
+              ) : jobs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                    Aucune offre trouvée.
+                  </td>
+                </tr>
+              ) : (
+                jobs.map((job) => (
+                  <tr key={job.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{job.title}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{job.client?.name ?? '—'}</td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                          statusBadge[job.approval_status] ?? 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {statusLabel[job.approval_status] ?? job.approval_status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      {job.budget_min != null ? `${job.budget_min} MAD` : '—'}
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-1">
+                      {job.approval_status === 'pending' && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={actionLoading === job.id}
+                            onClick={() => handleApprove(job.id)}
+                            className="text-xs px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 inline-flex items-center gap-1"
+                          >
+                            <Check size={14} />
+                            Approuver
+                          </button>
+                          <button
+                            type="button"
+                            disabled={actionLoading === job.id}
+                            onClick={() => handleReject(job.id)}
+                            className="text-xs px-2 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 inline-flex items-center gap-1"
+                          >
+                            <Ban size={14} />
+                            Rejeter
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        disabled={actionLoading === job.id}
+                        onClick={() => openEdit(job)}
+                        className="text-xs px-2 py-1.5 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 inline-flex items-center gap-1"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={actionLoading === job.id}
+                        onClick={() => handleDelete(job.id)}
+                        className="text-xs px-2 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 inline-flex items-center gap-1"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </td>
                   </tr>
-                ) : (
-                  jobs.map((job) => (
-                    <tr key={job.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{job.title}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {job.client?.name ?? job.company_name ?? '—'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="text-xs font-medium px-2 py-1 rounded-full bg-gray-100 text-gray-700 capitalize">
-                          {job.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {job.budget_min != null && job.budget_max != null
-                          ? `${job.budget_min} - ${job.budget_max} MAD`
-                          : job.budget_min != null
-                            ? `${job.budget_min} MAD`
-                            : '—'}
-                      </td>
-                      <td className="px-6 py-4 text-right space-x-2">
-                        <button
-                          type="button"
-                          disabled={actionLoading === job.id}
-                          onClick={() => openEdit(job)}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 inline-flex items-center gap-1"
-                        >
-                          <Pencil size={14} />
-                          Modifier
-                        </button>
-                        <button
-                          type="button"
-                          disabled={actionLoading === job.id}
-                          onClick={() => handleDelete(job.id)}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50 inline-flex items-center gap-1"
-                        >
-                          <Trash2 size={14} />
-                          Supprimer
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                ))
+              )}
             </tbody>
           </table>
         </div>

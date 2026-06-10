@@ -20,7 +20,10 @@ class CertificateService
         $completedCount = \Illuminate\Support\Facades\DB::table('lesson_progress')
             ->where('user_id', $user->id)
             ->whereIn('lesson_id', $lessonIds)
-            ->where('is_completed', true)
+            ->where(function ($query) {
+                $query->where('is_completed', true)
+                    ->orWhere('progress_percent', '>=', 100);
+            })
             ->count();
 
         if ($completedCount < $lessonIds->count()) {
