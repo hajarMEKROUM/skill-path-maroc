@@ -10,10 +10,10 @@ return new class extends Migration
     {
         Schema::create('placement_answers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('placement_test_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('placement_question_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('placement_test_id')->constrained('placement_tests')->onDelete('cascade');
+            $table->foreignId('placement_question_id')->constrained('placement_questions')->onDelete('cascade');
             $table->string('selected_answer');
-            $table->boolean('is_correct');
+            $table->boolean('is_correct')->default(false);
             $table->timestamps();
         });
     }
