@@ -1,7 +1,14 @@
-import React from 'react';
 import { motion } from 'framer-motion';
-import { MoreVertical, Shield, CheckCircle, XCircle, Mail, Clock, Edit2, Trash2 } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, Mail, Clock, Edit2, Trash2 } from 'lucide-react';
 import GlassCard from '../ui/GlassCard';
+
+const formatDate = (value, fallback = '—') => {
+  if (!value) return fallback;
+
+  const parsedDate = new Date(value);
+
+  return Number.isNaN(parsedDate.getTime()) ? fallback : parsedDate.toLocaleDateString();
+};
 
 const UsersTable = ({ users, isLoading, onActionClick }) => {
 
@@ -103,7 +110,7 @@ const UsersTable = ({ users, isLoading, onActionClick }) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="flex items-center">
                       <Clock className="w-3 h-3 mr-1" />
-                      {new Date(user.created_at || Date.now()).toLocaleDateString()}
+                      {formatDate(user.created_at)}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

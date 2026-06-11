@@ -1,6 +1,13 @@
-import React from 'react';
 import GlassCard from '../ui/GlassCard';
 import { Mail, Clock, Calendar, CheckCircle, MapPin, Hash } from 'lucide-react';
+
+const formatDate = (value, fallback = '—') => {
+  if (!value) return fallback;
+
+  const parsedDate = new Date(value);
+
+  return Number.isNaN(parsedDate.getTime()) ? fallback : parsedDate.toLocaleDateString();
+};
 
 const UserProfileSection = ({ user }) => {
   if (!user) return null;
@@ -52,7 +59,7 @@ const UserProfileSection = ({ user }) => {
               <Calendar className="w-5 h-5 text-gray-400 mr-3" />
               <div>
                 <p className="text-gray-500 font-medium">Joined Platform</p>
-                <p className="text-gray-900">{new Date(user.created_at || Date.now()).toLocaleDateString()}</p>
+                <p className="text-gray-900">{formatDate(user.created_at)}</p>
               </div>
             </div>
             <div className="flex items-center text-sm">
